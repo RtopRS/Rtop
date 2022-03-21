@@ -1,0 +1,12 @@
+[package]
+name = "rtop"
+version = "0.0.1"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pancurses = "0.17"
+systemstat = "0.1.10"
+tokio = { version = "1", features = ["full"] }
+chrono = "0.4.19"
