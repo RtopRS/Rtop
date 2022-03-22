@@ -89,10 +89,7 @@ async fn main() {
     term.addstr(" rtop ");
     term.attrset(pancurses::A_NORMAL);
     term.addstr(format!("for {}", current_os));
-    term.attron(pancurses::A_BOLD);
-    term.mvaddstr(height - 1, 1, "Q ");
-    term.attroff(pancurses::A_BOLD);
-    term.addstr("quit");
+    display_help(&term, height);
     term.refresh();
 
     height -= 2;
@@ -122,9 +119,7 @@ async fn main() {
                 term.addstr(" rtop ");
                 term.attrset(pancurses::A_NORMAL);
                 term.addstr("for archlinux");
-                term.mvaddstr(height - 1, 1, "Q ");
-                term.attroff(pancurses::A_BOLD);
-                term.addstr("quit");
+                display_help(&term, height);
 
                 height -= 2;
                 cpu_win.resize(height / 2, width);
@@ -156,4 +151,24 @@ async fn main() {
     endwin();
     print!("\x1b[?25h");
     std::process::exit(0);
+}
+
+fn display_help(term: &Window, win_height: i32) {
+    let mut help: std::collections::HashMap<char, &str> = std::collections::HashMap::new();
+    help.insert('Q', "Quit");
+    /*help.insert('J', "Down");
+    help.insert('K', "Up");
+    help.insert('g', "Jump to top");
+    help.insert('G', "Jump to bottom");*/
+    
+    term.mv(win_height - 1, 0);
+
+    for (key, value) in help {
+        term.attron(pancurses::A_BOLD);
+        term.attron(pancurses::ColorPair(2));
+        term.addstr(format!(" {} ", key));
+        term.attroff(pancurses::A_BOLD);
+        term.attroff(pancurses::ColorPair(2));
+        term.addstr(value);
+    }
 }
