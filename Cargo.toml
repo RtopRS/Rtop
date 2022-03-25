@@ -10,3 +10,8 @@ pancurses = "0.17"
 systemstat = "0.1.10"
 tokio = { version = "1", features = ["full"] }
 chrono = "0.4.19"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true

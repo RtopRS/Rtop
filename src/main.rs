@@ -6,6 +6,7 @@ use chrono::Timelike;
 
 mod window;
 mod chart;
+mod listview;
 
 use std::sync::Arc;
 use crate::systemstat::Platform;
@@ -98,18 +99,30 @@ async fn main() {
     let mut memory_win = window::Window::new(height - cpu_win.height, width / 2, 0, cpu_win.height + 1, ColorPair(1), ColorPair(2), "Memory Usage".to_string());
     let mut process_win = window::Window::new(height - cpu_win.height, width - memory_win.width, memory_win.width, cpu_win.height + 1,  ColorPair(1), ColorPair(2), "Process List".to_string());
     
+    let mut process_name_to_change = vec!();
+    process_name_to_change.push(listview::ListItem{name: "Rtop".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "Tess".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "Discord".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "Brave".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "Visual Studio Code".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "I3".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "Chrome".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "Firefox".to_string()});
+    process_name_to_change.push(listview::ListItem{name: "Spotify".to_string()});
+
     let mut chart = chart::Chart::new(memory_win.width - 2, memory_win.height - 2, true);
     let mut cpu_chart = chart::Chart::new(cpu_win.width - 2, cpu_win.height - 2, true);
-
-    let mut counter = 0;
+    let mut process_list = listview::ListView::new(process_win.height - 2, process_win.width - 2, process_name_to_change, "Name", vec!("col1".to_string(), "col2".to_string()));
 
     term.timeout(333);
     noecho();
 
+    let mut name_to_find_key_kill_process = false;
+
     loop {
         match term.getch() {
-            Some(pancurses::Input::KeyDown) => (counter -= 1),
-            Some(pancurses::Input::KeyUp) => (counter += 1),
+            Some(pancurses::Input::KeyDown) => (process_list.next()),
+            Some(pancurses::Input::KeyUp) => (process_list.previous()),
             Some(pancurses::Input::KeyResize) => {
                 term.erase();
                 term.resize(0, 0);
@@ -118,7 +131,7 @@ async fn main() {
                 term.attron(ColorPair(2));
                 term.addstr(" rtop ");
                 term.attrset(pancurses::A_NORMAL);
-                term.addstr("for archlinux");
+                term.addstr(format!("for {}", current_os));
                 display_help(&term, height);
 
                 height -= 2;
@@ -130,14 +143,32 @@ async fn main() {
                 process_win.deplace(memory_win.width, cpu_win.height + 1);
                 chart.resize(memory_win.width - 2, memory_win.height - 2);
                 cpu_chart.resize(cpu_win.width - 2, cpu_win.height - 2);
+                process_list.resize(process_win.height - 2, process_win.width - 2);
             },
+            Some(pancurses::Input::Character('d')) => {
+                if name_to_find_key_kill_process {
+                    //counter += 5;
+                    name_to_find_key_kill_process = false;
+                } else {
+                    name_to_find_key_kill_process = true;
+                }
+
+            }
             Some(pancurses::Input::Character('q')) => { break }
+            Some(pancurses::Input::Character('g')) => {
+                process_list.to_first()
+            }
+            Some(pancurses::Input::Character('G')) => {
+                process_list.to_last()
+            }
             Some(_) => (),
-            None => ()
+            None => {
+                name_to_find_key_kill_process = false
+            }
         }
         memory_win.write(&chart.display(&*memory_data.lock().await).to_string());
         cpu_win.write(&cpu_chart.display(&*cpu_data.lock().await).to_string());
-        process_win.write(&format!("{}", counter));
+        process_win.write(&format!("{}", process_list.display()));
         process_win.refresh();
         cpu_win.refresh();
         memory_win.refresh();
@@ -154,12 +185,13 @@ async fn main() {
 }
 
 fn display_help(term: &Window, win_height: i32) {
-    let mut help: std::collections::HashMap<char, &str> = std::collections::HashMap::new();
-    help.insert('Q', "Quit");
-    /*help.insert('J', "Down");
-    help.insert('K', "Up");
-    help.insert('g', "Jump to top");
-    help.insert('G', "Jump to bottom");*/
+    let mut help: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
+    help.insert("Q", "Quit");
+    help.insert("J", "Down");
+    help.insert("K", "Up");
+    help.insert("g", "Jump to top");
+    help.insert("G", "Jump to bottom");
+    help.insert("dd", "Kill process");
     
     term.mv(win_height - 1, 0);
 
@@ -169,6 +201,6 @@ fn display_help(term: &Window, win_height: i32) {
         term.addstr(format!(" {} ", key));
         term.attroff(pancurses::A_BOLD);
         term.attroff(pancurses::ColorPair(2));
-        term.addstr(value);
+        term.addstr(format!("{} ", value));
     }
 }

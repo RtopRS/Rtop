@@ -32,7 +32,18 @@ impl Window {
     pub fn write(&self, content: &str) {
         self.draw_border();
         self.inner_window.erase();
-        self.inner_window.addstr(content);
+        let mut aa = false;
+        for line in content.split("[[REVERSE]]") {
+            self.inner_window.addstr(line);
+            if aa {
+                self.inner_window.attroff(pancurses::A_REVERSE);
+                aa = false;
+            } else {
+                self.inner_window.attron(pancurses::A_REVERSE);
+                aa = true;
+            }
+        }
+        self.inner_window.attroff(pancurses::A_REVERSE);
     }
 
     fn draw_border(&self) {
