@@ -3,6 +3,7 @@ extern crate systemstat;
 
 use pancurses::*;
 use chrono::Timelike;
+use sysinfo::{ProcessExt, SystemExt, ProcessRefreshKind};
 
 mod window;
 mod chart;
@@ -22,12 +23,15 @@ fn get_linux_distribution() -> String {
 #[tokio::main]
 async fn main() {
     let sys = systemstat::System::new();
+    let mut sys_process_info = sysinfo::System::new_all();
     let memory_data = Arc::new(tokio::sync::Mutex::new(vec!()));
     let memory_mutex = Arc::clone(&memory_data);
     let cpu_data = Arc::new(tokio::sync::Mutex::new(vec!()));
     let cpu_mutex = Arc::clone(&cpu_data);
     let load_avg_data = Arc::new(tokio::sync::Mutex::new("".to_string()));
     let load_avg_mutex = Arc::clone(&load_avg_data);
+    let processes_list = Arc::new(tokio::sync::Mutex::new(vec!()));
+    let processes_list_mutex = Arc::clone(&processes_list);
 
     tokio::spawn(async move {
         let mut last_cpu = 0.;
@@ -54,6 +58,36 @@ async fn main() {
             let mem = sys.memory().unwrap();
             let mut mem_lock = memory_mutex.lock().await;
             mem_lock.push(((mem.total.as_u64() - mem.free.as_u64()) * 100 / mem.total.as_u64()) as i32);
+        }
+    });
+
+    tokio::spawn(async move {
+        loop {
+            sys_process_info.refresh_processes();
+            let mut process_done = vec!();
+            let mut process_list = processes_list_mutex.lock().await;
+            process_list.clear();
+            for (_, process) in sys_process_info.processes() {
+                if process_done.contains(&process.name()) {
+                    continue;
+                }
+                process_done.push(process.name());
+
+                let mut process_data = std::collections::HashMap::new();
+                let total_cpu = 0.;
+                let mut total_memory: u64 = 0;
+                let mut count: i32 = 0;
+                for sub_proc in sys_process_info.processes_by_exact_name(process.name()) {
+                    count += 1;
+                    total_memory += sub_proc.memory();
+                }
+                process_data.insert("CPU %".to_string(), total_cpu.to_string());
+                process_data.insert("Count".to_string(), count.to_string());
+                process_data.insert("Memory %".to_string(), total_memory.to_string());
+
+                process_list.push(listview::ListItem::new(process.name(), &process_data));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(333));
         }
     });
 
@@ -99,20 +133,10 @@ async fn main() {
     let mut memory_win = window::Window::new(height - cpu_win.height, width / 2, 0, cpu_win.height + 1, ColorPair(1), ColorPair(2), "Memory Usage".to_string());
     let mut process_win = window::Window::new(height - cpu_win.height, width - memory_win.width, memory_win.width, cpu_win.height + 1,  ColorPair(1), ColorPair(2), "Process List".to_string());
     
-    let mut process_name_to_change = vec!();
-    process_name_to_change.push(listview::ListItem{name: "Rtop".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "Tess".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "Discord".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "Brave".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "Visual Studio Code".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "I3".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "Chrome".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "Firefox".to_string()});
-    process_name_to_change.push(listview::ListItem{name: "Spotify".to_string()});
 
     let mut chart = chart::Chart::new(memory_win.width - 2, memory_win.height - 2, true);
     let mut cpu_chart = chart::Chart::new(cpu_win.width - 2, cpu_win.height - 2, true);
-    let mut process_list = listview::ListView::new(process_win.height - 2, process_win.width - 2, process_name_to_change, "Name", vec!("col1".to_string(), "col2".to_string()));
+    let mut process_list = listview::ListView::new(process_win.height - 2, process_win.width - 2, &*processes_list.lock().await, "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()));
 
     term.timeout(333);
     noecho();
@@ -147,7 +171,6 @@ async fn main() {
             },
             Some(pancurses::Input::Character('d')) => {
                 if name_to_find_key_kill_process {
-                    //counter += 5;
                     name_to_find_key_kill_process = false;
                 } else {
                     name_to_find_key_kill_process = true;
@@ -166,6 +189,7 @@ async fn main() {
                 name_to_find_key_kill_process = false
             }
         }
+        process_list.update_items(&*processes_list.lock().await);
         memory_win.write(&chart.display(&*memory_data.lock().await).to_string());
         cpu_win.write(&cpu_chart.display(&*cpu_data.lock().await).to_string());
         process_win.write(&format!("{}", process_list.display()));
