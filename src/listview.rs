@@ -66,7 +66,7 @@ impl ListView {
         let mut i = 1;
         for item in displayed_items {
             if i == self.selected_line {
-                aa = format!("{}[[REVERSE]]{}{}[[REVERSE]]", aa, item.name, " ".repeat(self.width as usize - item.name.len() - secondary_cols.len() - 1))
+                aa = format!("{}[[REVERSE]]{}{}", aa, item.name, " ".repeat(self.width as usize - item.name.len() - secondary_cols.len() - 1))
             } else {
                 aa = format!("{}{}{}", aa, item.name, " ".repeat(self.width as usize - item.name.len() - secondary_cols.len() - 1))
             }
@@ -77,6 +77,9 @@ impl ListView {
                     aa = format!("{}{}", aa, " ".repeat(col.len() + 3));
                 }
                 
+            }
+            if i == self.selected_line {
+                aa = format!("{}[[REVERSE]]", aa);
             }
             aa = format!("{}\n", aa);
 

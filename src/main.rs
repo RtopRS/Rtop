@@ -3,7 +3,7 @@ extern crate systemstat;
 
 use pancurses::*;
 use chrono::Timelike;
-use sysinfo::{ProcessExt, SystemExt, ProcessRefreshKind};
+use sysinfo::{ProcessExt, SystemExt};
 
 mod window;
 mod chart;
@@ -65,8 +65,7 @@ async fn main() {
         loop {
             sys_process_info.refresh_processes();
             let mut process_done = vec!();
-            let mut process_list = processes_list_mutex.lock().await;
-            process_list.clear();
+            let mut new_process_list = vec!();
             for (_, process) in sys_process_info.processes() {
                 if process_done.contains(&process.name()) {
                     continue;
@@ -74,18 +73,23 @@ async fn main() {
                 process_done.push(process.name());
 
                 let mut process_data = std::collections::HashMap::new();
-                let total_cpu = 0.;
+                let mut total_cpu = 0.;
                 let mut total_memory: u64 = 0;
                 let mut count: i32 = 0;
                 for sub_proc in sys_process_info.processes_by_exact_name(process.name()) {
                     count += 1;
                     total_memory += sub_proc.memory();
+                    total_cpu += sub_proc.cpu_usage()
                 }
-                process_data.insert("CPU %".to_string(), total_cpu.to_string());
+                process_data.insert("CPU %".to_string(), format!("{:.1}", total_cpu.to_string()));
                 process_data.insert("Count".to_string(), count.to_string());
-                process_data.insert("Memory %".to_string(), total_memory.to_string());
+                process_data.insert("Memory %".to_string(), format!("{:.1}", (total_memory as f32 * 100. / sys_process_info.total_memory() as f32)));
 
-                process_list.push(listview::ListItem::new(process.name(), &process_data));
+                new_process_list.push(listview::ListItem::new(process.name(), &process_data));
+            }
+            {
+                let mut process_list = processes_list_mutex.lock().await;
+                *process_list = new_process_list
             }
             std::thread::sleep(std::time::Duration::from_millis(333));
         }
