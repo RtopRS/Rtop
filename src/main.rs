@@ -63,7 +63,6 @@ async fn main() {
 
     tokio::spawn(async move {
         loop {
-            sys_process_info.refresh_processes();
             let mut process_done = vec!();
             let mut new_process_list = vec!();
             for (_, process) in sys_process_info.processes() {
@@ -92,6 +91,7 @@ async fn main() {
                 *process_list = new_process_list
             }
             std::thread::sleep(std::time::Duration::from_millis(333));
+            sys_process_info.refresh_processes();
         }
     });
 

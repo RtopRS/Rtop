@@ -61,7 +61,7 @@ impl ListView {
         
         let mut secondary_cols = "".to_string();
         for key in &self.secondary_keys {
-            secondary_cols = format!("{}{}   ", secondary_cols, key)
+            secondary_cols = format!("{}{}  ", secondary_cols, key)
         }
         let mut aa = format!("{}{}{}\n", self.primary_key, " ".repeat(self.width as usize - self.primary_key.len() - secondary_cols.len() - 1), secondary_cols);
         let mut displayed_items = &self.items[..];
@@ -70,16 +70,17 @@ impl ListView {
         }
         let mut i = 1;
         for item in displayed_items {
+            let name = item.name.chars().into_iter().take(self.width as usize - 2 - secondary_cols.len()).collect::<String>();
             if i == self.selected_line {
-                aa = format!("{}[[REVERSE]]{}{}", aa, item.name, " ".repeat(self.width as usize - item.name.len() - secondary_cols.len() - 1))
+                aa = format!("{}[[REVERSE]]{}{}", aa, name, " ".repeat(self.width as usize - name.len() - secondary_cols.len() - 1))
             } else {
-                aa = format!("{}{}{}", aa, item.name, " ".repeat(self.width as usize - item.name.len() - secondary_cols.len() - 1))
+                aa = format!("{}{}{}", aa, name, " ".repeat(self.width as usize - name.len() - secondary_cols.len() - 1))
             }
             for col in &self.secondary_keys {
                 if item.data.contains_key(col) {
-                    aa = format!("{}{}{}", aa, item.data[col], " ".repeat((col.len() + 3) - item.data[col].len()));
+                    aa = format!("{}{}{}", aa, item.data[col], " ".repeat((col.len() + 2) - item.data[col].len()));
                 } else {
-                    aa = format!("{}{}", aa, " ".repeat(col.len() + 3));
+                    aa = format!("{}{}", aa, " ".repeat(col.len() + 2));
                 }
                 
             }
