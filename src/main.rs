@@ -1,25 +1,13 @@
-extern crate pancurses;
-extern crate systemstat;
-
 use pancurses::*;
+use std::sync::Arc;
 use chrono::Timelike;
+use systemstat::Platform;
 use sysinfo::{ProcessExt, SystemExt};
 
 mod window;
 mod chart;
 mod listview;
 
-use std::sync::Arc;
-use crate::systemstat::Platform;
-
-fn get_linux_distribution() -> String {
-    let mut release_name: String = "".to_string();
-    if std::path::Path::new("/etc/os-release").exists(){
-        let contents = std::fs::read_to_string("/etc/os-release").unwrap();
-        release_name = contents.split("NAME=").collect::<Vec<&str>>()[1].split("\n").collect::<Vec<&str>>()[0].to_string().replace("\"", "").replace(" ", "");
-    }
-    release_name
-}
 
 #[tokio::main]
 async fn main() {
@@ -35,6 +23,8 @@ async fn main() {
     let processes_list_mutex = Arc::clone(&processes_list);
 
     let physical_core_count = sys_process_info.physical_core_count();
+
+    let current_os = sys_process_info.name().unwrap();
 
     tokio::spawn(async move {
         let mut last_cpu = 0.;
@@ -102,8 +92,6 @@ async fn main() {
         }
     });
 
-    let current_os = get_linux_distribution();
-
     tokio::spawn(async {
         match tokio::signal::ctrl_c().await {
             Ok(()) => {
@@ -144,7 +132,6 @@ async fn main() {
     let mut memory_win = window::Window::new(height - cpu_win.height, width / 2, 0, cpu_win.height + 1, ColorPair(1), ColorPair(2), "Memory Usage".to_string());
     let mut process_win = window::Window::new(height - cpu_win.height, width - memory_win.width, memory_win.width, cpu_win.height + 1,  ColorPair(1), ColorPair(2), "Process List".to_string());
     
-
     let mut chart = chart::Chart::new(memory_win.width - 2, memory_win.height - 2, true);
     let mut cpu_chart = chart::Chart::new(cpu_win.width - 2, cpu_win.height - 2, true);
     let mut process_list = listview::ListView::new(process_win.height - 2, process_win.width - 2, &*processes_list.lock().await, "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()));

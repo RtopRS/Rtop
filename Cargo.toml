@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 pancurses = "0.17"
 systemstat = "0.1.10"
-tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread", "macros", "signal"] }
+tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros", "signal"] }
 chrono = { version = "0.4.19", features = ["clock"], default-features = false }
 sysinfo = "0.23.5"
 
