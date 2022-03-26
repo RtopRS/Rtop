@@ -175,6 +175,12 @@ async fn main() {
             },
             Some(pancurses::Input::Character('d')) => {
                 if name_to_find_key_kill_process {
+                    process_list.select(|item| {
+                        let sys_process_info = sysinfo::System::new_all();
+                        for proc in sys_process_info.processes_by_exact_name(&item.name) {
+                            proc.kill();
+                        }
+                    });
                     name_to_find_key_kill_process = false;
                 } else {
                     name_to_find_key_kill_process = true;
@@ -188,6 +194,20 @@ async fn main() {
             Some(pancurses::Input::Character('G')) => {
                 process_list.to_last()
             }
+
+            Some(pancurses::Input::Character('m')) => {
+                process_list.sort_by("Memory %")
+            }
+            Some(pancurses::Input::Character('c')) => {
+                process_list.sort_by("CPU %")
+            }
+            Some(pancurses::Input::Character('C')) => {
+                process_list.sort_by("Count")
+            }
+            Some(pancurses::Input::Character('n')) => {
+                process_list.sort_by("Name")
+            }
+
             Some(_) => (),
             None => {
                 name_to_find_key_kill_process = false
@@ -220,6 +240,10 @@ fn display_help(term: &Window, win_height: i32) {
     help.insert("g", "Jump to top");
     help.insert("G", "Jump to bottom");
     help.insert("dd", "Kill process");
+    help.insert("m", "Sort by memory");
+    help.insert("n", "Sort by name");
+    help.insert("c", "Sort by CPU");
+    help.insert("C", "Sort by count");
     
     term.mv(win_height - 1, 0);
 

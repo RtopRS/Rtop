@@ -6,13 +6,13 @@ pub struct ListView {
     secondary_keys: Vec<String>,
     selected_line : i32,
     start_index: i32,
-
+    sort_key: String,
     counter: i32
 }
 
 impl ListView {
     pub fn new(height: i32, width: i32, items: &Vec<ListItem>, primary_key: &str, secondary_keys: Vec<String>) -> ListView {
-        ListView{height: height, width: width, counter: 0, items: items.to_vec(), primary_key: primary_key.to_string(), secondary_keys: secondary_keys, selected_line: 1, start_index: 0}
+        ListView{height: height, width: width, counter: 0, items: items.to_vec(), primary_key: primary_key.to_string(), secondary_keys: secondary_keys, selected_line: 1, start_index: 0, sort_key: primary_key.to_string()}
     }
 
     pub fn previous(&mut self) {
@@ -53,7 +53,12 @@ impl ListView {
     }
 
     pub fn display(&mut self) -> String {
-        self.items.sort_by(|a, b| (b.data["Count"].parse::<usize>().unwrap()).cmp(&(a.data["Count"].parse::<usize>().unwrap())));
+        if self.sort_key != self.primary_key {
+            self.items.sort_by(|a, b| (b.data[&self.sort_key].parse::<f32>().unwrap()).partial_cmp(&(a.data[&self.sort_key].parse::<f32>().unwrap())).unwrap());
+        } else {
+            self.items.sort_by(|a, b| (a.name.to_lowercase().cmp(&b.name.to_lowercase())));
+        }
+        
         let mut secondary_cols = "".to_string();
         for key in &self.secondary_keys {
             secondary_cols = format!("{}{}   ", secondary_cols, key)
@@ -102,6 +107,15 @@ impl ListView {
         if items.len() < self.counter as usize {
             self.counter = items.len() as i32 - 1;
         }
+    }
+
+    pub fn select(&self, callback: fn(&ListItem)) {
+        let a = &self.items[self.counter as usize];
+        callback(a);
+    }
+
+    pub fn sort_by(&mut self, key: &str) {
+        self.sort_key = key.to_string();
     }
 }
 
