@@ -13,11 +13,12 @@ use std::sync::Arc;
 use crate::systemstat::Platform;
 
 fn get_linux_distribution() -> String {
+    let mut release_name: String = "".to_string();
     if std::path::Path::new("/etc/os-release").exists(){
         let contents = std::fs::read_to_string("/etc/os-release").unwrap();
-        return contents.split("NAME=").collect::<Vec<&str>>()[1].split("\n").collect::<Vec<&str>>()[0].to_string().replace("\"", "").replace(" ", "");
+        release_name = contents.split("NAME=").collect::<Vec<&str>>()[1].split("\n").collect::<Vec<&str>>()[0].to_string().replace("\"", "").replace(" ", "");
     }
-    "".to_string()
+    release_name
 }
 
 #[tokio::main]
@@ -33,15 +34,18 @@ async fn main() {
     let processes_list = Arc::new(tokio::sync::Mutex::new(vec!()));
     let processes_list_mutex = Arc::clone(&processes_list);
 
+    let physical_core_count = sys_process_info.physical_core_count();
+
     tokio::spawn(async move {
         let mut last_cpu = 0.;
         loop {
             match sys.cpu_load_aggregate() {
                 Ok(cpu) => {
-                    std::thread::sleep(std::time::Duration::from_millis(333));
                     let cpu = cpu.done().unwrap();
-                    let mut cpu_lock = cpu_mutex.lock().await;
-                    cpu_lock.push(((cpu.user + last_cpu) / 2. * 100.) as i32);
+                    {
+                        let mut cpu_lock = cpu_mutex.lock().await;
+                        cpu_lock.push(((cpu.user + last_cpu) / 2. * 100.) as i32);
+                    }
                     last_cpu = cpu.user;
                 }
                 Err(_) => ()
@@ -56,8 +60,12 @@ async fn main() {
             }
 
             let mem = sys.memory().unwrap();
-            let mut mem_lock = memory_mutex.lock().await;
-            mem_lock.push(((mem.total.as_u64() - mem.free.as_u64()) * 100 / mem.total.as_u64()) as i32);
+            {
+                let mut mem_lock = memory_mutex.lock().await;
+                mem_lock.push(((mem.total.as_u64() - mem.free.as_u64()) * 100 / mem.total.as_u64()) as i32);
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(334));
         }
     });
 
@@ -80,7 +88,7 @@ async fn main() {
                     total_memory += sub_proc.memory();
                     total_cpu += sub_proc.cpu_usage()
                 }
-                process_data.insert("CPU %".to_string(), format!("{:.1}", total_cpu.to_string()));
+                process_data.insert("CPU %".to_string(), format!("{:.1}", (total_cpu / physical_core_count.unwrap() as f32)));
                 process_data.insert("Count".to_string(), count.to_string());
                 process_data.insert("Memory %".to_string(), format!("{:.1}", (total_memory as f32 * 100. / sys_process_info.total_memory() as f32)));
 
@@ -90,7 +98,7 @@ async fn main() {
                 let mut process_list = processes_list_mutex.lock().await;
                 *process_list = new_process_list
             }
-            std::thread::sleep(std::time::Duration::from_millis(333));
+            std::thread::sleep(std::time::Duration::from_millis(2500));
             sys_process_info.refresh_processes();
         }
     });
@@ -142,7 +150,7 @@ async fn main() {
     let mut cpu_chart = chart::Chart::new(cpu_win.width - 2, cpu_win.height - 2, true);
     let mut process_list = listview::ListView::new(process_win.height - 2, process_win.width - 2, &*processes_list.lock().await, "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()));
 
-    term.timeout(333);
+    term.timeout(334);
     noecho();
 
     let mut name_to_find_key_kill_process = false;
@@ -213,17 +221,21 @@ async fn main() {
                 name_to_find_key_kill_process = false
             }
         }
-        process_list.update_items(&*processes_list.lock().await);
-        memory_win.write(&chart.display(&*memory_data.lock().await).to_string());
-        cpu_win.write(&cpu_chart.display(&*cpu_data.lock().await).to_string());
+        {
+            process_list.update_items(&*processes_list.lock().await);
+            memory_win.write(&chart.display(&*memory_data.lock().await).to_string());
+            cpu_win.write(&cpu_chart.display(&*cpu_data.lock().await).to_string());
+        }
         process_win.write(&format!("{}", process_list.display()));
         process_win.refresh();
         cpu_win.refresh();
         memory_win.refresh();
         let now = chrono::Utc::now();
         term.mvaddstr(0, width - 9, &format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second()));
-        let load_average = load_avg_data.lock().await;
-        term.mvaddstr(0, width / 2 - (load_average.len() / 2) as i32, &*load_average);
+        {
+            let load_average = load_avg_data.lock().await;
+            term.mvaddstr(0, width / 2 - (load_average.len() / 2) as i32, &*load_average);
+        }
         term.refresh();
     }
 

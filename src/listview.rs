@@ -53,12 +53,6 @@ impl ListView {
     }
 
     pub fn display(&mut self) -> String {
-        if self.sort_key != self.primary_key {
-            self.items.sort_by(|a, b| (b.data[&self.sort_key].parse::<f32>().unwrap()).partial_cmp(&(a.data[&self.sort_key].parse::<f32>().unwrap())).unwrap());
-        } else {
-            self.items.sort_by(|a, b| (a.name.to_lowercase().cmp(&b.name.to_lowercase())));
-        }
-        
         let mut secondary_cols = "".to_string();
         for key in &self.secondary_keys {
             secondary_cols = format!("{}{}  ", secondary_cols, key)
@@ -107,6 +101,12 @@ impl ListView {
         self.items = items.to_vec();
         if items.len() < self.counter as usize {
             self.counter = items.len() as i32 - 1;
+        }
+
+        if self.sort_key != self.primary_key {
+            self.items.sort_by(|a, b| (b.data[&self.sort_key].parse::<f32>().unwrap()).partial_cmp(&(a.data[&self.sort_key].parse::<f32>().unwrap())).unwrap());
+        } else {
+            self.items.sort_by(|a, b| (a.name.to_lowercase().cmp(&b.name.to_lowercase())));
         }
     }
 
