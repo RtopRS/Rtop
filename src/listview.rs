@@ -128,7 +128,6 @@ pub struct ListItem {
 
 impl ListItem {
     pub fn new(name: &str, data: &std::collections::HashMap<String, String>) -> ListItem {
-        let new_item = ListItem{name: name.to_string(), data: data.clone()};
-        new_item
+        ListItem{name: name.to_string(), data: data.clone()}
     }
 }

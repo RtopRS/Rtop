@@ -41,6 +41,7 @@ async fn main() {
         loop {
             match sys.cpu_load_aggregate() {
                 Ok(cpu) => {
+                    std::thread::sleep(std::time::Duration::from_millis(334));
                     let cpu = cpu.done().unwrap();
                     {
                         let mut cpu_lock = cpu_mutex.lock().await;
@@ -64,8 +65,6 @@ async fn main() {
                 let mut mem_lock = memory_mutex.lock().await;
                 mem_lock.push(((mem.total.as_u64() - mem.free.as_u64()) * 100 / mem.total.as_u64()) as i32);
             }
-
-            std::thread::sleep(std::time::Duration::from_millis(334));
         }
     });
 
@@ -157,8 +156,8 @@ async fn main() {
 
     loop {
         match term.getch() {
-            Some(pancurses::Input::KeyDown) => (process_list.next()),
-            Some(pancurses::Input::KeyUp) => (process_list.previous()),
+            Some(pancurses::Input::KeyDown) => { process_list.next() },
+            Some(pancurses::Input::KeyUp) => { process_list.previous() },
             Some(pancurses::Input::KeyResize) => {
                 term.erase();
                 term.resize(0, 0);
@@ -189,37 +188,18 @@ async fn main() {
                             proc.kill();
                         }
                     });
-                    name_to_find_key_kill_process = false;
-                } else {
-                    name_to_find_key_kill_process = true;
                 }
-
+                name_to_find_key_kill_process = !name_to_find_key_kill_process;
             }
             Some(pancurses::Input::Character('q')) => { break }
-            Some(pancurses::Input::Character('g')) => {
-                process_list.to_first()
-            }
-            Some(pancurses::Input::Character('G')) => {
-                process_list.to_last()
-            }
-
-            Some(pancurses::Input::Character('m')) => {
-                process_list.sort_by("Memory %")
-            }
-            Some(pancurses::Input::Character('c')) => {
-                process_list.sort_by("CPU %")
-            }
-            Some(pancurses::Input::Character('C')) => {
-                process_list.sort_by("Count")
-            }
-            Some(pancurses::Input::Character('n')) => {
-                process_list.sort_by("Name")
-            }
-
+            Some(pancurses::Input::Character('g')) => { process_list.to_first() }
+            Some(pancurses::Input::Character('G')) => { process_list.to_last() }
+            Some(pancurses::Input::Character('m')) => { process_list.sort_by("Memory %") }
+            Some(pancurses::Input::Character('c')) => { process_list.sort_by("CPU %") }
+            Some(pancurses::Input::Character('C')) => { process_list.sort_by("Count") }
+            Some(pancurses::Input::Character('n')) => { process_list.sort_by("Name") }
             Some(_) => (),
-            None => {
-                name_to_find_key_kill_process = false
-            }
+            None => { name_to_find_key_kill_process = false }
         }
         {
             process_list.update_items(&*processes_list.lock().await);
@@ -230,13 +210,10 @@ async fn main() {
         process_win.refresh();
         cpu_win.refresh();
         memory_win.refresh();
-        let now = chrono::Utc::now();
+        let now = chrono::Local::now();
         term.mvaddstr(0, width - 9, &format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second()));
-        {
-            let load_average = load_avg_data.lock().await;
-            term.mvaddstr(0, width / 2 - (load_average.len() / 2) as i32, &*load_average);
-        }
-        term.refresh();
+        let load_average = load_avg_data.lock().await;
+        term.mvaddstr(0, width / 2 - (load_average.len() / 2) as i32, &*load_average);
     }
 
     endwin();

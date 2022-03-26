@@ -6,17 +6,14 @@ pub struct Chart {
 
 impl Chart {
     pub fn display(&self, pourcents: &Vec<i32>) -> String {
-        let mut data: Vec<i32>;
+        let mut data = pourcents.to_vec();
         if pourcents.len() >= ((self.cols * 2) - 1) as usize {
             data = pourcents.as_slice()[pourcents.len() + 2 - (self.cols * 2) as usize..].to_vec();
-        } else {
-            data = pourcents.to_vec();
         }
         data.reverse();
 
-        let mut name_to_define: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
-
         let space_to_add = self.cols as f32 - (data.len() as f32 / 2.);
+        let mut name_to_define: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
 
         name_to_define.insert("10", "⡀");
         name_to_define.insert("20", "⡄");
@@ -56,12 +53,12 @@ impl Chart {
 
         let mut graph: String = "".to_string();
 
-        let mut aa = self.rows;
+        let mut graph_rows = self.rows;
         if self.show_pourcent {
-            aa = self.rows - 1;
+            graph_rows = self.rows - 1;
         }
 
-        for row in 0..aa {
+        for row in 0..graph_rows {
             let mut i = 0;
             while i < data.len() {
                 let pourcent_one = data[i as usize];
@@ -98,11 +95,9 @@ impl Chart {
                     full_block_to_add_two = 4;
                 }
 
-
                 graph = format!("{}{}", graph, name_to_define[&format!("{}{}",full_block_to_add_two, full_block_to_add_one).to_string()[..]]);
                 i += 2
             }
-
 
             graph = format!("\n{}{}", graph, " ".repeat(space_to_add as usize));
         }

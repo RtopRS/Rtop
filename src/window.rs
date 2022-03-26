@@ -37,11 +37,10 @@ impl Window {
             self.inner_window.addstr(line);
             if aa {
                 self.inner_window.attroff(pancurses::A_REVERSE);
-                aa = false;
             } else {
                 self.inner_window.attron(pancurses::A_REVERSE);
-                aa = true;
             }
+            aa = !aa;
         }
         self.inner_window.attroff(pancurses::A_REVERSE);
     }
@@ -70,8 +69,7 @@ impl Window {
 
     pub fn deplace(&mut self, x: i32, y: i32) {
         self.curse_window.mvwin(y, x);
-        let new_inner_win = self.curse_window.derwin(self.height - 2,self.width - 2, 1, 1).unwrap();
-        self.inner_window = new_inner_win;
+        self.inner_window = self.curse_window.derwin(self.height - 2,self.width - 2, 1, 1).unwrap();
         self.inner_window.attron(self.text_color);
     }
 }
