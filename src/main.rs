@@ -1,11 +1,9 @@
+use rtop::*;
 use pancurses::*;
 use std::sync::Arc;
 use chrono::Timelike;
 use systemstat::Platform;
 use sysinfo::{ProcessExt, SystemExt};
-
-mod window;
-mod widget;
 
 
 #[tokio::main]
