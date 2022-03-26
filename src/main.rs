@@ -5,8 +5,7 @@ use systemstat::Platform;
 use sysinfo::{ProcessExt, SystemExt};
 
 mod window;
-mod chart;
-mod listview;
+mod widget;
 
 
 #[tokio::main]
@@ -81,7 +80,7 @@ async fn main() {
                 process_data.insert("Count".to_string(), count.to_string());
                 process_data.insert("Memory %".to_string(), format!("{:.1}", (total_memory as f32 * 100. / sys_process_info.total_memory() as f32)));
 
-                new_process_list.push(listview::ListItem::new(process.name(), &process_data));
+                new_process_list.push(widget::listview::ListItem::new(process.name(), &process_data));
             }
             {
                 let mut process_list = processes_list_mutex.lock().await;
@@ -132,9 +131,9 @@ async fn main() {
     let mut memory_win = window::Window::new(height - cpu_win.height, width / 2, 0, cpu_win.height + 1, ColorPair(1), ColorPair(2), "Memory Usage".to_string());
     let mut process_win = window::Window::new(height - cpu_win.height, width - memory_win.width, memory_win.width, cpu_win.height + 1,  ColorPair(1), ColorPair(2), "Process List".to_string());
     
-    let mut chart = chart::Chart::new(memory_win.width - 2, memory_win.height - 2, true);
-    let mut cpu_chart = chart::Chart::new(cpu_win.width - 2, cpu_win.height - 2, true);
-    let mut process_list = listview::ListView::new(process_win.height - 2, process_win.width - 2, &*processes_list.lock().await, "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()));
+    let mut chart = widget::chart::Chart::new(memory_win.width - 2, memory_win.height - 2, true);
+    let mut cpu_chart = widget::chart::Chart::new(cpu_win.width - 2, cpu_win.height - 2, true);
+    let mut process_list = widget::listview::ListView::new(process_win.height - 2, process_win.width - 2, &*processes_list.lock().await, "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()));
 
     term.timeout(334);
     noecho();
