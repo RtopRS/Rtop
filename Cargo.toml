@@ -1,16 +1,21 @@
 [package]
 name = "rtop"
 version = "0.0.1"
+authors = ["SquitchYT<contact@squitch.fr>"]
 edition = "2021"
-
-[dependencies]
-pancurses = "0.17"
-systemstat = "0.1.10"
-tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros", "signal"] }
-chrono = { version = "0.4.19", features = ["clock"], default-features = false }
-sysinfo = "0.23.5"
+description = "Faster and better alternative to Vtop written in Rust."
+repository = "https://github.com/SquitchYT/RTop"
+readme = "README.md"
+license = "MPL-2.0"
 
 [profile.release]
 codegen-units = 1
-lto = true
 strip = true
+lto = true
+
+[dependencies]
+tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros", "signal"] }
+chrono = { version = "0.4.19", features = ["clock"], default-features = false }
+systemstat = "0.1.10"
+pancurses = "0.17"
+sysinfo = "0.23.5"
