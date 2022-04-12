@@ -16,6 +16,5 @@ lto = true
 [dependencies]
 tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros", "signal"] }
 chrono = { version = "0.4.19", features = ["clock"], default-features = false }
-systemstat = "0.1.10"
 pancurses = "0.17"
 sysinfo = "0.23.5"

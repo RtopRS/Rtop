@@ -2,14 +2,13 @@ use rtop_rs::*;
 use pancurses::*;
 use std::sync::Arc;
 use chrono::Timelike;
-use systemstat::Platform;
-use sysinfo::{ProcessExt, SystemExt};
+use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 
 
 #[tokio::main]
 async fn main() {
-    let sys = systemstat::System::new();
     let mut sys_process_info = sysinfo::System::new_all();
+    let mut sys_memory_info = sysinfo::System::new_all();
     let memory_data = Arc::new(tokio::sync::Mutex::new(vec!()));
     let memory_mutex = Arc::clone(&memory_data);
     let cpu_data = Arc::new(tokio::sync::Mutex::new(vec!()));
@@ -19,39 +18,33 @@ async fn main() {
     let processes_list = Arc::new(tokio::sync::Mutex::new(vec!()));
     let processes_list_mutex = Arc::clone(&processes_list);
 
-    let physical_core_count = sys_process_info.physical_core_count();
+    let physical_core_count = sys_process_info.physical_core_count().unwrap();
 
     let current_os = sys_process_info.name().unwrap();
 
     tokio::spawn(async move {
         let mut last_cpu = 0.;
         loop {
-            match sys.cpu_load_aggregate() {
-                Ok(cpu) => {
-                    std::thread::sleep(std::time::Duration::from_millis(334));
-                    let cpu = cpu.done().unwrap();
-                    {
-                        let mut cpu_lock = cpu_mutex.lock().await;
-                        cpu_lock.push(((cpu.user + last_cpu) / 2. * 100.) as i32);
-                    }
-                    last_cpu = cpu.user;
-                }
-                Err(_) => ()
-            };
-
-            match sys.load_average() {
-                Ok(loadavg) => {
-                    let mut load_average = load_avg_mutex.lock().await;
-                    *load_average = format!(" Load Average: {:.2} {:.2} {:.2} ", loadavg.one, loadavg.five, loadavg.fifteen);
-                },
-                Err(_) => ()
+            sys_memory_info.refresh_cpu();
+            sys_memory_info.refresh_memory();
+            let cpu_usage = sys_memory_info.global_processor_info().cpu_usage();
+            {
+                let mut cpu_lock = cpu_mutex.lock().await;
+                cpu_lock.push(((cpu_usage + last_cpu) / 2.) as i32);
             }
+            last_cpu = cpu_usage;
+
 
             {
-                let mem = sys.memory().unwrap();
-                let mut mem_lock = memory_mutex.lock().await;
-                mem_lock.push(((mem.total.as_u64() - mem.free.as_u64()) * 100 / mem.total.as_u64()) as i32);
+                let load_average = sys_memory_info.load_average();
+                let mut load_average_string = load_avg_mutex.lock().await;
+                *load_average_string = format!(" Load Average: {:.2} {:.2} {:.2} ", load_average.one, load_average.five, load_average.fifteen);
             }
+            {
+                let mut mem_lock = memory_mutex.lock().await;
+                mem_lock.push((sys_memory_info.used_memory() * 100 / sys_memory_info.total_memory()) as i32);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(334));
         }
     });
 
@@ -74,7 +67,7 @@ async fn main() {
                     total_memory += sub_proc.memory();
                     total_cpu += sub_proc.cpu_usage()
                 }
-                process_data.insert("CPU %".to_string(), format!("{:.1}", (total_cpu / physical_core_count.unwrap() as f32)));
+                process_data.insert("CPU %".to_string(), format!("{:.1}", (total_cpu / physical_core_count as f32)));
                 process_data.insert("Count".to_string(), count.to_string());
                 process_data.insert("Memory %".to_string(), format!("{:.1}", (total_memory as f32 * 100. / sys_process_info.total_memory() as f32)));
 
