@@ -313,7 +313,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rtop"
+name = "rtop-rs"
 version = "0.0.1"
 dependencies = [
  "chrono",

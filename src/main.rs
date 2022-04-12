@@ -1,4 +1,4 @@
-use rtop::*;
+use rtop_rs::*;
 use pancurses::*;
 use std::sync::Arc;
 use chrono::Timelike;
@@ -47,8 +47,8 @@ async fn main() {
                 Err(_) => ()
             }
 
-            let mem = sys.memory().unwrap();
             {
+                let mem = sys.memory().unwrap();
                 let mut mem_lock = memory_mutex.lock().await;
                 mem_lock.push(((mem.total.as_u64() - mem.free.as_u64()) * 100 / mem.total.as_u64()) as i32);
             }
