@@ -24,13 +24,20 @@
 </h3>
 
 ## Features
-* Lightweight
+* Lightweight < 1MB
 * Responsive UI
 * Sort Process by Memory, CPU Usage and Process Count
 * Work on Linux, Windows and MacOS
 * Graph for Memory and CPU
 * Easy to Use
 * Designed for You
+
+## Downloads
+### Crates.io
+Rtop is available on [crates.io](https://crates.io/crates/rtop-rs/) You can download it with
+```bash
+cargo install rtop-rs
+```
 
 ## Build manually
 Start by cloning the repo:
@@ -44,7 +51,7 @@ Now switch to project folder and compile a release:
 cd RTop && cargo build --release
 ```
 
-Your executable will be in the `target/release/` folder, it is named `rtop`.
+Your executable will be in the `target/release/` folder, it is named `rtop-rs`.
 
 ## Contributors
 [<img width="45" src="https://avatars.githubusercontent.com/u/63391793?v=4" alt="SquitchYT">](https://github.com/SquitchYT)
