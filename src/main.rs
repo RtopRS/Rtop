@@ -103,7 +103,12 @@ async fn main() {
     init_pair(1, COLOR_GREEN, -1);
     init_pair(2, COLOR_BLUE, -1);
 
-    curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_INVISIBLE).unwrap();
+    match curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_INVISIBLE) {
+        None => {
+            println!("\x1b[?25l");
+        }
+        Some(_) => ()
+    }
 
     let mut height = 0;
     let mut width = 0;
