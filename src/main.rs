@@ -19,7 +19,6 @@ async fn main() {
     let processes_list_mutex = Arc::clone(&processes_list);
 
     let physical_core_count = sys_process_info.physical_core_count().unwrap();
-
     let current_os = sys_process_info.name().unwrap();
 
     tokio::spawn(async move {

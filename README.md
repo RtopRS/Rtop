@@ -27,7 +27,7 @@
 * Lightweight < 1MB
 * Responsive UI
 * Sort Process by Memory, CPU Usage and Process Count
-* Work on Linux, Windows and MacOS
+* Work on Linux and MacOS
 * Graph for Memory and CPU
 * Easy to Use
 * Designed for You
