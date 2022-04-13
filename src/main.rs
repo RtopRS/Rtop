@@ -1,5 +1,5 @@
 use rtop_rs::*;
-use pancurses::*;
+use ncurses::*;
 use std::sync::Arc;
 use chrono::Timelike;
 use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
@@ -7,6 +7,9 @@ use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 
 #[tokio::main]
 async fn main() {
+    let locale_conf = LcCategory::all;
+    setlocale(locale_conf, "fr_FR.UTF-8");
+
     let mut sys_process_info = sysinfo::System::new_all();
     let mut sys_memory_info = sysinfo::System::new_all();
     let memory_data = Arc::new(tokio::sync::Mutex::new(vec!()));
@@ -92,58 +95,61 @@ async fn main() {
           }
     });
 
-    let mut term = initscr();
-    term.keypad(true);
+    let term = initscr();
+    keypad(term, true);
     start_color();
     use_default_colors();
 
     init_pair(1, COLOR_GREEN, -1);
     init_pair(2, COLOR_BLUE, -1);
 
-    let result = curs_set(0);
-    if result == -1 {
-        println!("\x1b[?25l");
-    }
+    curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_INVISIBLE).unwrap();
 
-    let (mut height, mut width) = term.get_max_yx();
+    let mut height = 0;
+    let mut width = 0;
 
-    term.attron(pancurses::A_BOLD);
-    term.attron(ColorPair(2));
-    term.addstr(" rtop ");
-    term.attrset(pancurses::A_NORMAL);
-    term.addstr(format!("for {}", current_os));
-    display_help(&term, height);
-    term.refresh();
+    getmaxyx(term, &mut height, &mut width);
+
+    attron(ncurses::A_BOLD());
+    attron(COLOR_PAIR(2));
+    addstr(" rtop ");
+    attrset(ncurses::A_NORMAL());
+    addstr(&format!("for {}", current_os));
+    refresh();
+
+    display_help(height);
 
     height -= 2;
 
-    let mut cpu_win = window::Window::new(height / 2, width, 0, 1, ColorPair(1), ColorPair(2), "CPU Usage".to_string());
-    let mut memory_win = window::Window::new(height - cpu_win.height, width / 2, 0, cpu_win.height + 1, ColorPair(1), ColorPair(2), "Memory Usage".to_string());
-    let mut process_win = window::Window::new(height - cpu_win.height, width - memory_win.width, memory_win.width, cpu_win.height + 1,  ColorPair(1), ColorPair(2), "Process List".to_string());
+    let mut cpu_win = window::Window::new(height / 2, width, 0, 1, COLOR_PAIR(1), COLOR_PAIR(2), "CPU Usage".to_string());
+    let mut memory_win = window::Window::new(height - cpu_win.height, width / 2, 0, cpu_win.height + 1, COLOR_PAIR(1), COLOR_PAIR(2), "Memory Usage".to_string());
+    let mut process_win = window::Window::new(height - cpu_win.height, width - memory_win.width, memory_win.width, cpu_win.height + 1, COLOR_PAIR(1), COLOR_PAIR(2), "Process List".to_string());
     
     let mut chart = widget::chart::Chart::new(memory_win.width - 2, memory_win.height - 2, true);
     let mut cpu_chart = widget::chart::Chart::new(cpu_win.width - 2, cpu_win.height - 2, true);
     let mut process_list = widget::listview::ListView::new(process_win.height - 2, process_win.width - 2, &*processes_list.lock().await, "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()));
 
-    term.timeout(334);
+    timeout(334);
+
+    //term.timeout(334);
     noecho();
 
     let mut name_to_find_key_kill_process = false;
 
     loop {
-        match term.getch() {
-            Some(pancurses::Input::KeyDown) => { process_list.next() },
-            Some(pancurses::Input::KeyUp) => { process_list.previous() },
-            Some(pancurses::Input::KeyResize) => {
-                term.erase();
-                term.resize(0, 0);
-                (height, width) = term.get_max_yx();
-                term.attron(pancurses::A_BOLD);
-                term.attron(ColorPair(2));
-                term.addstr(" rtop ");
-                term.attrset(pancurses::A_NORMAL);
-                term.addstr(format!("for {}", current_os));
-                display_help(&term, height);
+        match getch() {
+            ncurses::KEY_DOWN => { process_list.next() },
+            ncurses::KEY_UP => { process_list.previous() },
+            ncurses::KEY_RESIZE => {
+                erase();
+                resize_term(0, 0);
+                getmaxyx(term, &mut height, &mut width);
+                attron(ncurses::A_BOLD());
+                attron(COLOR_PAIR(2));
+                addstr(" rtop ");
+                attrset(ncurses::A_NORMAL());
+                addstr(&format!("for {}", current_os));
+                display_help(height);
 
                 height -= 2;
                 cpu_win.resize(height / 2, width);
@@ -156,7 +162,7 @@ async fn main() {
                 cpu_chart.resize(cpu_win.width - 2, cpu_win.height - 2);
                 process_list.resize(process_win.height - 2, process_win.width - 2);
             },
-            Some(pancurses::Input::Character('d')) => {
+            100 => {
                 if name_to_find_key_kill_process {
                     process_list.select(|item| {
                         let sys_process_info = sysinfo::System::new_all();
@@ -167,15 +173,13 @@ async fn main() {
                 }
                 name_to_find_key_kill_process = !name_to_find_key_kill_process;
             }
-            Some(pancurses::Input::Character('q')) => { break }
-            Some(pancurses::Input::Character('g')) => { process_list.to_first() }
-            Some(pancurses::Input::Character('G')) => { process_list.to_last() }
-            Some(pancurses::Input::Character('m')) => { process_list.sort_by("Memory %") }
-            Some(pancurses::Input::Character('c')) => { process_list.sort_by("CPU %") }
-            Some(pancurses::Input::Character('C')) => { process_list.sort_by("Count") }
-            Some(pancurses::Input::Character('n')) => { process_list.sort_by("Name") }
-            Some(_) => (),
-            None => { name_to_find_key_kill_process = false }
+            113 => { break }
+            103 => { process_list.to_first() }
+            71 => { process_list.to_last() }
+            109 => { process_list.sort_by("Memory %") }
+            99 => { process_list.sort_by("CPU %") }
+            67 => { process_list.sort_by("Count") }
+            _ => name_to_find_key_kill_process = false
         }
         {
             process_list.update_items(&*processes_list.lock().await);
@@ -187,9 +191,9 @@ async fn main() {
         cpu_win.refresh();
         memory_win.refresh();
         let now = chrono::Local::now();
-        term.mvaddstr(0, width - 9, &format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second()));
+        mvaddstr(0, width - 9, &format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second()));
         let load_average = load_avg_data.lock().await;
-        term.mvaddstr(0, width / 2 - (load_average.len() / 2) as i32, &*load_average);
+        mvaddstr(0, width / 2 - (load_average.len() / 2) as i32, &*load_average);
     }
 
     endwin();
@@ -197,7 +201,7 @@ async fn main() {
     std::process::exit(0);
 }
 
-fn display_help(term: &Window, win_height: i32) {
+fn display_help(win_height: i32) {
     let mut help: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
     help.insert("Q", "Quit");
     help.insert("J", "Down");
@@ -210,14 +214,14 @@ fn display_help(term: &Window, win_height: i32) {
     help.insert("c", "Sort by CPU");
     help.insert("C", "Sort by count");
     
-    term.mv(win_height - 1, 0);
+    mv(win_height - 1, 0);
 
     for (key, value) in help {
-        term.attron(pancurses::A_BOLD);
-        term.attron(pancurses::ColorPair(2));
-        term.addstr(format!(" {} ", key));
-        term.attroff(pancurses::A_BOLD);
-        term.attroff(pancurses::ColorPair(2));
-        term.addstr(format!("{} ", value));
+        attron(ncurses::A_BOLD());
+        attron(COLOR_PAIR(2));
+        addstr(&format!(" {} ", key));
+        attroff(ncurses::A_BOLD());
+        attroff(COLOR_PAIR(2));
+        addstr(&format!("{} ", value));
     }
 }
