@@ -88,6 +88,7 @@ async fn main() {
         match tokio::signal::ctrl_c().await {
             Ok(()) => {
                 endwin();
+                curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_VISIBLE);
                 print!("\x1b[?25h");
                 std::process::exit(0);
             },
@@ -105,7 +106,7 @@ async fn main() {
 
     match curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_INVISIBLE) {
         None => {
-            println!("\x1b[?25l");
+            print!("\x1b[?25l");
         }
         Some(_) => ()
     }
