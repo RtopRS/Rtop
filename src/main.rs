@@ -7,7 +7,11 @@ use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 
 #[tokio::main]
 async fn main() {
-    setlocale(LcCategory::all, "");
+    let locale = setlocale(LcCategory::all, "");
+    if !locale.contains("UTF-8") {
+        println!("You need to suppoort UFT-8");
+        return;
+    }
 
     let mut sys_process_info = sysinfo::System::new_all();
     let mut sys_memory_info = sysinfo::System::new_all();
