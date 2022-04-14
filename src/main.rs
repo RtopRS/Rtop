@@ -136,8 +136,6 @@ async fn main() {
     let mut process_list = widget::listview::ListView::new(process_win.height - 2, process_win.width - 2, &*processes_list.lock().await, "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()));
 
     timeout(334);
-
-    //term.timeout(334);
     noecho();
 
     let mut name_to_find_key_kill_process = false;
@@ -149,7 +147,9 @@ async fn main() {
             ncurses::KEY_RESIZE => {
                 erase();
                 resize_term(0, 0);
+                refresh();
                 getmaxyx(term, &mut height, &mut width);
+                resizeterm(0, 0);
                 attron(ncurses::A_BOLD());
                 attron(COLOR_PAIR(2));
                 addstr(" rtop ");

@@ -17,7 +17,6 @@ impl Window {
         let win_box = newwin(height, width, y, x);
         let win_inner = derwin(win_box, height - 2, width - 2, 1, 1);
         let new_win = Window{height: height, width: width, x: x, y: y, curse_window: win_box, inner_window: win_inner, text_color: text_color, title: title, border_color: border_color};
-        wattrset(new_win.curse_window, border_color);
         wattrset(new_win.inner_window, text_color);
         new_win.draw_border();
         wrefresh(new_win.curse_window);
@@ -30,7 +29,6 @@ impl Window {
     }
 
     pub fn write(&self, content: &str) {
-        self.draw_border();
         werase(self.inner_window);
         let mut aa = false;
         for line in content.split("[[REVERSE]]") {
@@ -46,21 +44,24 @@ impl Window {
     }
 
     fn draw_border(&self) {
+        wattron(self.curse_window, self.border_color);
         box_(self.curse_window, 0, 0);
         wattroff(self.curse_window, self.border_color);
         mvwaddstr(self.curse_window, 0, 2, &format!(" {} ", &self.title));
-        wattrset(self.curse_window, self.border_color);
+        wattron(self.curse_window, self.border_color);
     }
 
     pub fn resize(&mut self, height: i32, width: i32) {
-        wresize(self.curse_window, height, width);
         self.height = height;
         self.width = width;
     }
 
     pub fn deplace(&mut self, x: i32, y: i32) {
-        wmove(self.curse_window, y, x);
+        delwin(self.curse_window);
+        delwin(self.inner_window);
+        self.curse_window = newwin(self.height, self.width, y, x);
         self.inner_window = derwin(self.curse_window, self.height - 2, self.width - 2, 1, 1);
         wattron(self.inner_window, self.text_color);
+        self.draw_border();
     }
 }
