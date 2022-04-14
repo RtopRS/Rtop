@@ -9,7 +9,7 @@ use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 async fn main() {
     let locale = setlocale(LcCategory::all, "");
     if !locale.contains("UTF-8") {
-        println!("You need to suppoort UFT-8");
+        println!("You need to suppoort UTF-8");
         return;
     }
 
