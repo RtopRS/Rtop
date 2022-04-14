@@ -13,43 +13,43 @@ impl Chart {
         data.reverse();
 
         let space_to_add = self.cols as f32 - (data.len() as f32 / 2.);
-        let mut name_to_define: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
+        let mut name_to_define: std::collections::HashMap<&str, String> = std::collections::HashMap::new();
 
-        name_to_define.insert("10", "⡀");
-        name_to_define.insert("20", "⡄");
-        name_to_define.insert("30", "⡆");
-        name_to_define.insert("40", "⡇");
+        name_to_define.insert("10", String::from("⡀"));
+        name_to_define.insert("20", String::from("⡄"));
+        name_to_define.insert("30", String::from("⡆"));
+        name_to_define.insert("40", String::from("⡇"));
 
-        name_to_define.insert("01", "⢀");
-        name_to_define.insert("02", "⢠");
-        name_to_define.insert("03", "⢰");
-        name_to_define.insert("04", "⢸");
+        name_to_define.insert("01", String::from("⢀"));
+        name_to_define.insert("02", String::from("⢠"));
+        name_to_define.insert("03", String::from("⢰"));
+        name_to_define.insert("04", String::from("⢸"));
 
-        name_to_define.insert("11", "⣀");
-        name_to_define.insert("21", "⣄");
-        name_to_define.insert("31", "⣆");
-        name_to_define.insert("41", "⣇");
+        name_to_define.insert("11", String::from("⣀"));
+        name_to_define.insert("21", String::from("⣄"));
+        name_to_define.insert("31", String::from("⣆"));
+        name_to_define.insert("41", String::from("⣇"));
 
-        name_to_define.insert("12", "⣠");
-        name_to_define.insert("22", "⣤");
-        name_to_define.insert("32", "⣦");
-        name_to_define.insert("42", "⣧");
+        name_to_define.insert("12", String::from("⣠"));
+        name_to_define.insert("22", String::from("⣤"));
+        name_to_define.insert("32", String::from("⣦"));
+        name_to_define.insert("42", String::from("⣧"));
 
-        name_to_define.insert("13", "⣰");
-        name_to_define.insert("23", "⣴");
-        name_to_define.insert("33", "⣶");
-        name_to_define.insert("43", "⣷");
+        name_to_define.insert("13", String::from("⣰"));
+        name_to_define.insert("23", String::from("⣴"));
+        name_to_define.insert("33", String::from("⣶"));
+        name_to_define.insert("43", String::from("⣷"));
 
-        name_to_define.insert("14", "⣸");
-        name_to_define.insert("24", "⣼");
-        name_to_define.insert("34", "⣾");
-        name_to_define.insert("44", "⣿");
+        name_to_define.insert("14", String::from("⣸"));
+        name_to_define.insert("24", String::from("⣼"));
+        name_to_define.insert("34", String::from("⣾"));
+        name_to_define.insert("44", String::from("⣿"));
 
-        name_to_define.insert("04", "⢀");
-        name_to_define.insert("04", "⢠");
-        name_to_define.insert("04", "⢰");
-        name_to_define.insert("04", "⢸");
-        name_to_define.insert("00", " ");
+        name_to_define.insert("01", String::from("⢀"));
+        name_to_define.insert("02", String::from("⢠"));
+        name_to_define.insert("03", String::from("⢰"));
+        name_to_define.insert("04", String::from("⢸"));
+        name_to_define.insert("00", String::from(" "));
 
         let mut graph: String = "".to_string();
 
