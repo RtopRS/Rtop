@@ -7,8 +7,7 @@ use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 
 #[tokio::main]
 async fn main() {
-    let locale_conf = LcCategory::all;
-    setlocale(locale_conf, "fr_FR.UTF-8");
+    setlocale(LcCategory::all, "");
 
     let mut sys_process_info = sysinfo::System::new_all();
     let mut sys_memory_info = sysinfo::System::new_all();
