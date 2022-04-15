@@ -1,6 +1,6 @@
 [package]
 name = "rtop-rs"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["SquitchYT<contact@squitch.fr>"]
 edition = "2021"
 description = "Faster and better alternative to Vtop written in Rust."

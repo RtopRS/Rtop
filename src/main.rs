@@ -90,12 +90,11 @@ async fn main() {
     tokio::spawn(async {
         match tokio::signal::ctrl_c().await {
             Ok(()) => {
-                endwin();
-                curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_VISIBLE);
-                print!("\x1b[?25h");
-                std::process::exit(0);
+                exit()
             },
-            Err(_) => {}
+            Err(_) => {
+                exit()
+            }
           }
     });
 
@@ -182,7 +181,7 @@ async fn main() {
                 }
                 name_to_find_key_kill_process = !name_to_find_key_kill_process;
             }
-            113 => { break }
+            113 => { exit() }
             103 => { process_list.to_first() }
             71 => { process_list.to_last() }
             109 => { process_list.sort_by("Memory %") }
@@ -204,10 +203,6 @@ async fn main() {
         let load_average = load_avg_data.lock().await;
         mvaddstr(0, width / 2 - (load_average.len() / 2) as i32, &*load_average);
     }
-
-    endwin();
-    print!("\x1b[?25h");
-    std::process::exit(0);
 }
 
 fn display_help(win_height: i32) {
@@ -233,4 +228,11 @@ fn display_help(win_height: i32) {
         attroff(COLOR_PAIR(2));
         addstr(&format!("{} ", value));
     }
+}
+
+fn exit() {
+    endwin();
+    curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_VISIBLE);
+    print!("\x1b[?25h");
+    std::process::exit(0);
 }
