@@ -1,14 +1,14 @@
 pub struct Chart {
     cols: i32,
     rows: i32,
-    show_pourcent: bool
+    show_percent: bool
 }
 
 impl Chart {
-    pub fn display(&self, pourcents: &Vec<i32>) -> String {
-        let mut data = pourcents.to_vec();
-        if pourcents.len() >= ((self.cols * 2) - 1) as usize {
-            data = pourcents.as_slice()[pourcents.len() + 2 - (self.cols * 2) as usize..].to_vec();
+    pub fn display(&self, percents: &Vec<i32>) -> String {
+        let mut data = percents.to_vec();
+        if percents.len() >= ((self.cols * 2) - 1) as usize {
+            data = percents.as_slice()[percents.len() + 2 - (self.cols * 2) as usize..].to_vec();
         }
         data.reverse();
 
@@ -54,27 +54,27 @@ impl Chart {
         let mut graph: String = "".to_string();
 
         let mut graph_rows = self.rows;
-        if self.show_pourcent {
+        if self.show_percent {
             graph_rows = self.rows - 1;
         }
 
         for row in 0..graph_rows {
             let mut i = 0;
             while i < data.len() {
-                let pourcent_one = data[i as usize];
-                let mut tmp_one = pourcent_one as f32 / 100. * self.rows as f32 * 4.;
+                let percent_one = data[i as usize];
+                let mut tmp_one = percent_one as f32 / 100. * self.rows as f32 * 4.;
                 if tmp_one < 1. {
                     tmp_one = 1.;
                 }
                 let mut full_block_to_add_one = tmp_one as i32 - (4 * row);
 
-                let mut pourcent_two = 0;
-                let mut tmp_two = pourcent_two as f32 / 100. * self.rows as f32 * 4.;
+                let mut percent_two = 0;
+                let mut tmp_two = percent_two as f32 / 100. * self.rows as f32 * 4.;
                 let mut full_block_to_add_two = tmp_two as i32 - (4 * row);
 
                 if i as usize + 1 < data.len() {    
-                    pourcent_two = data[i as usize + 1];
-                    tmp_two = pourcent_two as f32 / 100. * self.rows as f32 * 4.;
+                    percent_two = data[i as usize + 1];
+                    tmp_two = percent_two as f32 / 100. * self.rows as f32 * 4.;
                     if tmp_two < 1. {
                         tmp_two = 1.;
                     }
@@ -102,15 +102,15 @@ impl Chart {
             graph = format!("\n{}{}", graph, " ".repeat(space_to_add as usize));
         }
 
-        if self.show_pourcent && data.len() != 0 {
+        if self.show_percent && !data.is_empty() {
             graph = format!("{}%{}{}", graph, data[0].to_string().chars().rev().collect::<String>()," ".repeat((self.cols - data[0].to_string().chars().count() as i32 - 2) as usize));
         }
 
         graph.chars().rev().collect::<String>()
     }
 
-    pub fn new(cols: i32, rows: i32, show_pourcent: bool) -> Chart {
-        Chart{cols: cols, rows: rows, show_pourcent: show_pourcent}
+    pub fn new(cols: i32, rows: i32, show_percent: bool) -> Chart {
+        Chart{cols, rows, show_percent}
     }
 
     pub fn resize(&mut self, cols: i32, rows: i32) {

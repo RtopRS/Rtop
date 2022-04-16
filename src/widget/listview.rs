@@ -11,8 +11,8 @@ pub struct ListView {
 }
 
 impl ListView {
-    pub fn new(height: i32, width: i32, items: &Vec<ListItem>, primary_key: &str, secondary_keys: Vec<String>) -> ListView {
-        ListView{height: height, width: width, counter: 0, items: items.to_vec(), primary_key: primary_key.to_string(), secondary_keys: secondary_keys, selected_line: 1, start_index: 0, sort_key: primary_key.to_string()}
+    pub fn new(height: i32, width: i32, items: &[ListItem], primary_key: &str, secondary_keys: Vec<String>) -> ListView {
+        ListView{height, width, counter: 0, items: items.to_vec(), primary_key: primary_key.to_string(), secondary_keys, selected_line: 1, start_index: 0, sort_key: primary_key.to_string()}
     }
 
     pub fn previous(&mut self) {
@@ -97,7 +97,7 @@ impl ListView {
         }
     }
 
-    pub fn update_items(&mut self, items: &Vec<ListItem>) {
+    pub fn update_items(&mut self, items: &[ListItem]) {
         self.items = items.to_vec();
         if items.len() < self.counter as usize {
             self.counter = items.len() as i32 - 1;

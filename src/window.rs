@@ -16,11 +16,11 @@ impl Window {
     pub fn new(height: i32, width: i32, x: i32, y: i32, border_color: attr_t, text_color: attr_t, title: String) -> Window {
         let win_box = newwin(height, width, y, x);
         let win_inner = derwin(win_box, height - 2, width - 2, 1, 1);
-        let new_win = Window{height: height, width: width, x: x, y: y, curse_window: win_box, inner_window: win_inner, text_color: text_color, title: title, border_color: border_color};
+        let new_win = Window{height, width, x, y, curse_window: win_box, inner_window: win_inner, text_color, title, border_color};
         wattrset(new_win.inner_window, text_color);
         new_win.draw_border();
         wrefresh(new_win.curse_window);
-        return new_win;
+        new_win
     }
 
     pub fn refresh(&self) {
