@@ -12,6 +12,7 @@ license = "MPL-2.0"
 codegen-units = 1
 strip = true
 lto = true
+opt-level = "z" # Optimize for binary size
 
 [dependencies]
 tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros", "signal"] }

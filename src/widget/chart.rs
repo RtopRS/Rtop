@@ -12,6 +12,8 @@ impl Chart {
         }
         data.reverse();
 
+        //println!("{:?}", data);
+
         let space_to_add = self.cols as f32 - (data.len() as f32 / 2.);
         let mut name_to_define: std::collections::HashMap<&str, String> = std::collections::HashMap::new();
 
@@ -51,7 +53,7 @@ impl Chart {
         name_to_define.insert("04", String::from("⢸"));
         name_to_define.insert("00", String::from(" "));
 
-        let mut graph: String = "".to_string();
+        let mut graph: String = String::new();
 
         let mut graph_rows = self.rows;
         if self.show_percent {

@@ -8,18 +8,17 @@ pub struct Window {
     curse_window: ncurses::WINDOW,
     inner_window: ncurses::WINDOW,
     text_color: attr_t,
-    pub title: String,
-    border_color: attr_t
+    border_color: attr_t,
+    title: String
 }
 
 impl Window {
     pub fn new(height: i32, width: i32, x: i32, y: i32, border_color: attr_t, text_color: attr_t, title: String) -> Window {
         let win_box = newwin(height, width, y, x);
         let win_inner = derwin(win_box, height - 2, width - 2, 1, 1);
-        let new_win = Window{height, width, x, y, curse_window: win_box, inner_window: win_inner, text_color, title, border_color};
+        let new_win = Window{height, width, x, y, curse_window: win_box, inner_window: win_inner, text_color, border_color, title};
         wattrset(new_win.inner_window, text_color);
         new_win.draw_border();
-        wrefresh(new_win.curse_window);
         new_win
     }
 
@@ -47,7 +46,7 @@ impl Window {
         wattron(self.curse_window, self.border_color);
         box_(self.curse_window, 0, 0);
         wattroff(self.curse_window, self.border_color);
-        mvwaddstr(self.curse_window, 0, 2, &format!(" {} ", &self.title));
+        mvwaddstr(self.curse_window, 0, 2, &format!(" {} ", self.title));
         wattron(self.curse_window, self.border_color);
     }
 
@@ -63,5 +62,12 @@ impl Window {
         self.inner_window = derwin(self.curse_window, self.height - 2, self.width - 2, 1, 1);
         wattron(self.inner_window, self.text_color);
         self.draw_border();
+    }
+
+    pub fn set_title(&mut self, title: String) {
+        wattroff(self.curse_window, self.border_color);
+        mvwaddstr(self.curse_window, 0, 2, &format!(" {} ", title));
+        wattron(self.curse_window, self.border_color);
+        self.title = title;
     }
 }
