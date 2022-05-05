@@ -18,7 +18,9 @@ struct Option {
 }
 #[derive(Deserialize)]
 struct LibOption {
+    #[serde(default)]
     path: String,
+    #[serde(default)]
     provided_widgets: Vec<String>
 }
 
@@ -232,7 +234,7 @@ async fn main() {
                 } else if extern_addon.contains_key(&widget) {
                     let addon_path = &extern_addon[&widget];
                     let lib = &libs[&String::from(addon_path)];
-                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)> = unsafe { lib.get(format!("init_{}_plugin", widget).as_bytes()).unwrap() };
+                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)> = unsafe { lib.get(format!("init_{}", widget).as_bytes()).unwrap() };
                     let tmp = initializer();
                     if tmp.1 {
                         focusable_widgets.push(i);
