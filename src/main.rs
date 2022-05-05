@@ -27,23 +27,13 @@ struct MemoryUsage {
     data: Vec<i32>,
     chart: widget::chart::Chart
 }
-
 struct PluginError {}
-impl plugin::Plugin for PluginError {
-    fn display(&mut self, _h: i32, _w: i32) -> String {
-        String::from("An error occured while loading this plugin")
-    }
-
-    fn update(&mut self) {}
-}
-
 struct CpuUsage {
     sysinfo: sysinfo::System,
     data: Vec<i32>,
     chart: widget::chart::Chart,
     last_cpu_usage: f32
 }
-
 struct ProcessList {
     sysinfo: sysinfo::System,
     data: Vec<widget::listview::ListItem>,
@@ -86,7 +76,6 @@ impl plugin::Plugin for ProcessList {
             self.sysinfo.refresh_processes();
             self.refresh_progress = 0;
         }
-        
     }
 
     fn display(&mut self, h: i32, w: i32) -> String {
@@ -127,7 +116,6 @@ impl plugin::Plugin for ProcessList {
         }
     }
 }
-
 impl plugin::Plugin for CpuUsage {
     fn update(&mut self) {
         self.sysinfo.refresh_cpu();
@@ -139,7 +127,6 @@ impl plugin::Plugin for CpuUsage {
         self.chart.display(&self.data)
     }
 }
-
 impl plugin::Plugin for MemoryUsage {
     fn display(&mut self, h: i32, w: i32) -> String {
         self.chart.resize(w, h);
@@ -150,10 +137,13 @@ impl plugin::Plugin for MemoryUsage {
         self.sysinfo.refresh_memory();
         self.data.push((self.sysinfo.used_memory() * 100 / self.sysinfo.total_memory()) as i32);
     }
-
-    fn resize(&mut self, h: i32, w: i32) {
-        self.chart.resize(w, h);
+}
+impl plugin::Plugin for PluginError {
+    fn display(&mut self, _h: i32, _w: i32) -> String {
+        String::from("An error occured while loading this plugin")
     }
+
+    fn update(&mut self) {}
 }
 
 struct ScreenWidget {
@@ -164,7 +154,6 @@ struct Page {
     widgets: Vec<ScreenWidget>,
     focusable_widgets: Vec<i32>
 }
-
 unsafe impl Send for Page {}
 
 
@@ -456,10 +445,10 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
 
 
 fn init_cpuusage_plugin() -> (Box<dyn plugin::Plugin>, bool ){
-    (Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart::new(0, 0, true), sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
+    (Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart{cols: 0, rows: 0, show_percent: true}, sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
 }
 fn init_memory_plugin() -> (Box<dyn plugin::Plugin>, bool) {
-    (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart::new(0,0, true)}), false)
+    (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart{cols: 0, rows: 0, show_percent: true}}), false)
 }
 fn init_process_plugin() -> (Box<dyn plugin::Plugin>, bool) {
     (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false}), true)
