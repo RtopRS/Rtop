@@ -203,11 +203,18 @@ dependencies = [
  "home",
  "libloading",
  "ncurses",
+ "rtop_dev",
  "serde",
  "serde_json",
  "sysinfo",
  "tokio",
 ]
+
+[[package]]
+name = "rtop_dev"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da747ce9ce8db12c365abb43fc1ceead2e55e1fdfb29867cd054aa7084a85b1e"
 
 [[package]]
 name = "ryu"

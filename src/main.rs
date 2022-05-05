@@ -1,14 +1,14 @@
-use rtop_rs::*;
+use rtop_dev::*;
 use ncurses::*;
 use chrono::Timelike;
 use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 use serde::Deserialize;
+use rtop_rs::window;
+
 
 fn default_pages() -> Vec<Vec<String>> {
     vec!(vec!("cpu_chart".to_string(), "memory_chart".to_string(), "process_list".to_string()))
 }
-
-
 #[derive(Deserialize)]
 struct Option {
     #[serde(default = "default_pages")]
@@ -22,7 +22,7 @@ struct LibOption {
     provided_widgets: Vec<String>
 }
 
-struct MyPlugin {
+struct MemoryUsage {
     sysinfo: sysinfo::System,
     data: Vec<i32>,
     chart: widget::chart::Chart
@@ -140,7 +140,7 @@ impl plugin::Plugin for CpuUsage {
     }
 }
 
-impl plugin::Plugin for MyPlugin {
+impl plugin::Plugin for MemoryUsage {
     fn display(&mut self, h: i32, w: i32) -> String {
         self.chart.resize(w, h);
         self.chart.display(&self.data)
@@ -459,7 +459,7 @@ fn init_cpuusage_plugin() -> (Box<dyn plugin::Plugin>, bool ){
     (Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart::new(0, 0, true), sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
 }
 fn init_memory_plugin() -> (Box<dyn plugin::Plugin>, bool) {
-    (Box::new(MyPlugin{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart::new(0,0, true)}), false)
+    (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart::new(0,0, true)}), false)
 }
 fn init_process_plugin() -> (Box<dyn plugin::Plugin>, bool) {
     (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false}), true)
