@@ -4,11 +4,14 @@ use chrono::Timelike;
 use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 use serde::Deserialize;
 
-
+fn default_pages() -> Vec<Vec<String>> {
+    vec!(vec!("cpu_chart".to_string(), "memory_chart".to_string(), "process_list".to_string()))
+}
 
 
 #[derive(Deserialize)]
 struct Option {
+    #[serde(default = "default_pages")]
     pages: Vec<Vec<String>>,
     #[serde(default)]
     plugins: Vec<LibOption>
@@ -18,13 +21,6 @@ struct LibOption {
     path: String,
     provided_widgets: Vec<String>
 }
-
-
-
-
-
-
-
 
 struct MyPlugin {
     sysinfo: sysinfo::System,
@@ -165,19 +161,16 @@ struct ScreenWidget {
     name: String
 }
 struct Page {
-    widgets: Vec<ScreenWidget>
+    widgets: Vec<ScreenWidget>,
+    focusable_widgets: Vec<i32>
 }
 
 unsafe impl Send for Page {}
 
 
-
-
-
 #[tokio::main]
 async fn main() {
-    let option: Option = serde_json::from_str(&std::fs::read_to_string("./test2.json").unwrap()).unwrap();
-
+    let option: Option = serde_json::from_str(&std::fs::read_to_string(format!("{}/.config/rtop/config", home::home_dir().unwrap().display())).unwrap_or("{}".to_string())).unwrap();
 
     // loads all dynamic libs
     let mut libs = std::collections::HashMap::new();
@@ -196,18 +189,15 @@ async fn main() {
         }
     }
 
-
-
-    let mut builtin_addon: std::collections::HashMap<String, fn() -> Box<dyn plugin::Plugin>> = std::collections::HashMap::new();
+    let mut builtin_addon: std::collections::HashMap<String, fn() -> (Box<dyn plugin::Plugin>, bool)> = std::collections::HashMap::new();
     builtin_addon.insert("memory_chart".to_string(), init_memory_plugin);
     builtin_addon.insert("cpu_chart".to_string(), init_cpuusage_plugin);
     builtin_addon.insert("process_list".to_string(), init_process_plugin);
 
-
     // New Variable for Plugin Rework
     let mut current_page_number = 1;
     let sysinfo = sysinfo::System::new_all();
-    //let mut current_widget = 1;
+    let mut current_widget = 1;
 
     let locale = setlocale(LcCategory::all, "");
     if !locale.contains("UTF-8") {
@@ -223,14 +213,10 @@ async fn main() {
     let mut height = 0;
     let mut width = 0;
     getmaxyx(term, &mut height, &mut width);
+    curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+
     timeout(334);
     noecho();
-    match curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_INVISIBLE) {
-        None => {
-            print!("\x1b[?25l");
-        }
-        Some(_) => ()
-    }
 
     init_pair(1, COLOR_GREEN, -1);
     init_pair(2, COLOR_BLUE, -1);
@@ -240,24 +226,35 @@ async fn main() {
 
     for page in option.pages {
         if page.len() > 4 {
-            pages.lock().await.push(Page{widgets: vec!(ScreenWidget{name: "Error".to_string(), plugin: Box::new(PluginError{})})})
+            pages.lock().await.push(Page{widgets: vec!(ScreenWidget{name: "Error".to_string(), plugin: Box::new(PluginError{})}), focusable_widgets: vec!()})
         } else {
+            let mut i = 0;
             let mut pages_widgets = vec!();
+            let mut focusable_widgets = vec!();
 
             for widget in page {
+                i += 1;
                 if builtin_addon.contains_key(&widget) {
-                    pages_widgets.push(ScreenWidget{name: String::from(&widget), plugin: builtin_addon[&widget]()});
+                    let tmp = builtin_addon[&widget]();
+                    if tmp.1 {
+                        focusable_widgets.push(i);
+                    }
+                    pages_widgets.push(ScreenWidget{name: String::from(&widget), plugin: tmp.0 });
                 } else if extern_addon.contains_key(&widget) {
                     let addon_path = &extern_addon[&widget];
                     let lib = &libs[&String::from(addon_path)];
-                    let initializer: libloading::Symbol<extern "Rust" fn() -> Box<dyn plugin::Plugin>> = unsafe { lib.get(format!("init_{}_plugin", widget).as_bytes()).unwrap() };
-                    pages_widgets.push(ScreenWidget{name: widget, plugin: initializer()})
+                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)> = unsafe { lib.get(format!("init_{}_plugin", widget).as_bytes()).unwrap() };
+                    let tmp = initializer();
+                    if tmp.1 {
+                        focusable_widgets.push(i);
+                    }
+                    pages_widgets.push(ScreenWidget{name: widget, plugin: tmp.0})
                 } else {
                     pages_widgets.push(ScreenWidget{name: "Error".to_string(), plugin: Box::new(PluginError{})});
                 }
             }
             
-            pages.lock().await.push(Page{widgets: pages_widgets})
+            pages.lock().await.push(Page{widgets: pages_widgets, focusable_widgets: focusable_widgets})
                 
         }
     }
@@ -290,19 +287,33 @@ async fn main() {
 
     loop {
         let current_page_widget_count;
+        let current_page_focusable_widget_count;
         {
             let locked_pages = &mut pages.lock().await;
             let current_page = &mut locked_pages[current_page_number - 1];
-            current_page_widget_count = current_page.widgets.len(); 
+            current_page_widget_count = current_page.widgets.len();
+            current_page_focusable_widget_count = current_page.focusable_widgets.len();
 
+            if current_page_focusable_widget_count == 0 {
+                current_widget = 0;
+            }
 
             for i in 0..current_page_widget_count { // display all current page's widget
                 let current_widget_window = &mut widgets[i];
-                let name_to_find = &mut current_page.widgets[i];
-                current_widget_window.write(&name_to_find.plugin.display(current_widget_window.height - 2, current_widget_window.width - 2));
-                current_widget_window.set_title(name_to_find.name.to_string());
-                current_widget_window.refresh();
+                let widget = &mut current_page.widgets[i];
+                current_widget_window.write(&widget.plugin.display(current_widget_window.height - 2, current_widget_window.width - 2));
+                current_widget_window.set_title(widget.name.to_string());
+                current_widget_window.set_border_color(COLOR_PAIR(1));
             }
+            if current_page_focusable_widget_count > 1 {
+                let tmp = current_page.focusable_widgets[current_widget - 1];
+                widgets[(tmp as usize) - 1].set_border_color(COLOR_PAIR(2));
+                widgets[(tmp as usize) - 1].refresh();
+            }
+            for i in 0..current_page_widget_count {
+                widgets[i].refresh();
+            }
+
         }
         
         // Update TopBar and BottomBar Infos
@@ -324,6 +335,7 @@ async fn main() {
                 }
 
                 widgets = create_widget_window(height - 2, width, locked_pages[current_page_number - 1].widgets.len() as i32);
+                current_widget = 1;
             }
             ncurses::KEY_LEFT => {
                 current_page_number -= 1;
@@ -332,6 +344,7 @@ async fn main() {
                     current_page_number = 1;
                 }
                 widgets = create_widget_window(height - 2, width, locked_pages[current_page_number - 1].widgets.len() as i32);
+                current_widget = 1;
             }
             ncurses::KEY_RESIZE => {
                 erase();
@@ -346,11 +359,31 @@ async fn main() {
                 display_help(height);
                 widgets = create_widget_window(height - 2, width, current_page_widget_count as i32);
             }
+            9 => { // TAB Key
+                current_widget += 1;
+                if current_widget > current_page_focusable_widget_count {
+                    current_widget = current_page_focusable_widget_count;
+                }
+            }
+            353 => { // BackTAB Key
+                current_widget -= 1;
+                if current_widget < 1 {
+                    current_widget = 1;
+                }
+            }
+            90 => { // BackTAB Key
+                current_widget -= 1;
+                if current_widget < 1 {
+                    current_widget = 1;
+                }
+            }
             113 => { exit() }
             _ => {
-                let locked_pages = &mut pages.lock().await;
-                let current_page = &mut locked_pages[current_page_number - 1];
-                current_page.widgets[0].plugin.on_input(ncurses::keyname(key).unwrap());
+                if current_widget != 0 {
+                    let locked_pages = &mut pages.lock().await;
+                    let current_page = &mut locked_pages[current_page_number - 1];
+                    current_page.widgets[(current_page.focusable_widgets[current_widget - 1] as usize) - 1].plugin.on_input(ncurses::keyname(key).unwrap());
+                }
             }
         }
     }
@@ -384,10 +417,8 @@ fn display_help(win_height: i32) {
 fn exit() {
     endwin();
     curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_VISIBLE);
-    print!("\x1b[?25h");
     std::process::exit(0);
 }
-
 
 fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<window::Window> {
     let mut win_height = height;
@@ -405,17 +436,15 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
     let widget4;
     widget1 = window::Window::new(win_height, win_width, 0, 1, COLOR_PAIR(1), COLOR_PAIR(2), String::from("1"));
     widget2 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
-    if widget_count == 2 {
-        widget2 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
-    } else if widget_count == 3 {
-        widget2 = window::Window::new(height - win_height, width / 2, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
+    if widget_count == 3 {
+        widget2 = window::Window::new(height - win_height, (width as f32 / 2.).ceil() as i32, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
     } else if widget_count == 4 {
         widget2 = window::Window::new(win_height, width - win_width, win_width, 1, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
     }
     if widget_count == 4 {
-        widget3 = window::Window::new(height - win_height, width - win_width - 1, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("3"));
+        widget3 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("3"));
     } else {
-        widget3 = window::Window::new(height - win_height, width - (width / 2), width - (width / 2) - 1, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("3"));
+        widget3 = window::Window::new(height - win_height, width - (width as f32 / 2.).ceil() as i32, width - ((width / 2) as i32), 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("3"));
     }
     widget4 = window::Window::new(height - win_height, width - win_width, win_width, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("4"));
     widgets.push(widget1);
@@ -426,13 +455,12 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
 }
 
 
-
-fn init_cpuusage_plugin() -> Box<dyn plugin::Plugin> {
-   Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart::new(0, 0, true), sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}) 
+fn init_cpuusage_plugin() -> (Box<dyn plugin::Plugin>, bool ){
+    (Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart::new(0, 0, true), sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
 }
-fn init_memory_plugin() -> Box<dyn plugin::Plugin> {
-    Box::new(MyPlugin{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart::new(0,0, true)})
+fn init_memory_plugin() -> (Box<dyn plugin::Plugin>, bool) {
+    (Box::new(MyPlugin{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart::new(0,0, true)}), false)
 }
-fn init_process_plugin() ->Box<dyn plugin::Plugin> {
-    Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false})
+fn init_process_plugin() -> (Box<dyn plugin::Plugin>, bool) {
+    (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false}), true)
 }

@@ -48,6 +48,7 @@ impl Window {
         wattroff(self.curse_window, self.border_color);
         mvwaddstr(self.curse_window, 0, 2, &format!(" {} ", self.title));
         wattron(self.curse_window, self.border_color);
+
     }
 
     pub fn resize(&mut self, height: i32, width: i32) {
@@ -69,5 +70,10 @@ impl Window {
         mvwaddstr(self.curse_window, 0, 2, &format!(" {} ", title));
         wattron(self.curse_window, self.border_color);
         self.title = title;
+    }
+
+    pub fn set_border_color(&mut self, border_color: attr_t) {
+        self.border_color = border_color;
+        self.draw_border();
     }
 }
