@@ -45,7 +45,7 @@ struct ProcessList {
 }
 
 impl plugin::Plugin for ProcessList {
-    fn update(&mut self) {
+    fn on_update(&mut self) {
         self.refresh_progress += 1;
         if self.refresh_progress == 7 {
             let mut process_done = vec!();
@@ -117,9 +117,13 @@ impl plugin::Plugin for ProcessList {
             self.kill_process_security = false;
         }
     }
+
+    fn title(&mut self) -> String {
+        String::from("Processes")
+    }
 }
 impl plugin::Plugin for CpuUsage {
-    fn update(&mut self) {
+    fn on_update(&mut self) {
         self.sysinfo.refresh_cpu();
         self.data.push(((self.sysinfo.global_processor_info().cpu_usage() + self.last_cpu_usage) / 2.) as i32)
     }
@@ -128,6 +132,10 @@ impl plugin::Plugin for CpuUsage {
         self.chart.resize(w, h);
         self.chart.display(&self.data)
     }
+
+    fn title(&mut self) -> String {
+        String::from("CPU Usage")
+    }
 }
 impl plugin::Plugin for MemoryUsage {
     fn display(&mut self, h: i32, w: i32) -> String {
@@ -135,17 +143,19 @@ impl plugin::Plugin for MemoryUsage {
         self.chart.display(&self.data)
     }
 
-    fn update(&mut self) {
+    fn on_update(&mut self) {
         self.sysinfo.refresh_memory();
         self.data.push((self.sysinfo.used_memory() * 100 / self.sysinfo.total_memory()) as i32);
+    }
+
+    fn title(&mut self) -> String {
+        String::from("Memory")
     }
 }
 impl plugin::Plugin for PluginError {
     fn display(&mut self, _h: i32, _w: i32) -> String {
         String::from("An error occured while loading this plugin")
     }
-
-    fn update(&mut self) {}
 }
 
 struct ScreenWidget {
@@ -254,7 +264,7 @@ async fn main() {
         loop {
             for page in &mut *pages_mutex.lock().await {
                 for el in &mut page.widgets {
-                    el.plugin.update()
+                    el.plugin.on_update()
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(333));
@@ -293,7 +303,11 @@ async fn main() {
                 let current_widget_window = &mut widgets[i];
                 let widget = &mut current_page.widgets[i];
                 current_widget_window.write(&widget.plugin.display(current_widget_window.height - 2, current_widget_window.width - 2));
-                current_widget_window.set_title(widget.name.to_string());
+                let mut title = &widget.plugin.title();
+                if title == "" {
+                    title = &widget.name;
+                }
+                current_widget_window.set_title(title.to_string());
                 current_widget_window.set_border_color(COLOR_PAIR(1));
             }
             if current_page_focusable_widget_count > 1 {

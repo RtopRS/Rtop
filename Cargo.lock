@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "rtop-rs"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "chrono",
  "home",
@@ -212,9 +212,9 @@ dependencies = [
 
 [[package]]
 name = "rtop_dev"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6826b0a6f59d913e07d6583292e6300f2d73889391a2ca6962044026f47b1dc"
+checksum = "bc04124e4af3bb43e58b7ac7fd02fbb5d9b3ba5a80833188dcb50e9a8f018be5"
 
 [[package]]
 name = "ryu"

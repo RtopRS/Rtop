@@ -1,6 +1,6 @@
 [package]
 name = "rtop-rs"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["SquitchYT<contact@squitch.fr>"]
 edition = "2021"
 description = "Faster and better alternative to Vtop written in Rust."
@@ -23,4 +23,4 @@ libloading = "0.7"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"]}
 home = "0.5.3"
-rtop_dev = "0.1.2"
+rtop_dev = "0.2.0"
