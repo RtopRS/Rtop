@@ -18,7 +18,9 @@ struct Option {
 }
 #[derive(Deserialize)]
 struct LibOption {
+    #[serde(default)]
     path: String,
+    #[serde(default)]
     provided_widgets: Vec<String>
 }
 
@@ -27,23 +29,13 @@ struct MemoryUsage {
     data: Vec<i32>,
     chart: widget::chart::Chart
 }
-
 struct PluginError {}
-impl plugin::Plugin for PluginError {
-    fn display(&mut self, _h: i32, _w: i32) -> String {
-        String::from("An error occured while loading this plugin")
-    }
-
-    fn update(&mut self) {}
-}
-
 struct CpuUsage {
     sysinfo: sysinfo::System,
     data: Vec<i32>,
     chart: widget::chart::Chart,
     last_cpu_usage: f32
 }
-
 struct ProcessList {
     sysinfo: sysinfo::System,
     data: Vec<widget::listview::ListItem>,
@@ -53,7 +45,7 @@ struct ProcessList {
 }
 
 impl plugin::Plugin for ProcessList {
-    fn update(&mut self) {
+    fn on_update(&mut self) {
         self.refresh_progress += 1;
         if self.refresh_progress == 7 {
             let mut process_done = vec!();
@@ -86,7 +78,6 @@ impl plugin::Plugin for ProcessList {
             self.sysinfo.refresh_processes();
             self.refresh_progress = 0;
         }
-        
     }
 
     fn display(&mut self, h: i32, w: i32) -> String {
@@ -126,10 +117,13 @@ impl plugin::Plugin for ProcessList {
             self.kill_process_security = false;
         }
     }
-}
 
+    fn title(&mut self) -> String {
+        String::from("Processes")
+    }
+}
 impl plugin::Plugin for CpuUsage {
-    fn update(&mut self) {
+    fn on_update(&mut self) {
         self.sysinfo.refresh_cpu();
         self.data.push(((self.sysinfo.global_processor_info().cpu_usage() + self.last_cpu_usage) / 2.) as i32)
     }
@@ -138,21 +132,29 @@ impl plugin::Plugin for CpuUsage {
         self.chart.resize(w, h);
         self.chart.display(&self.data)
     }
-}
 
+    fn title(&mut self) -> String {
+        String::from("CPU Usage")
+    }
+}
 impl plugin::Plugin for MemoryUsage {
     fn display(&mut self, h: i32, w: i32) -> String {
         self.chart.resize(w, h);
         self.chart.display(&self.data)
     }
 
-    fn update(&mut self) {
+    fn on_update(&mut self) {
         self.sysinfo.refresh_memory();
         self.data.push((self.sysinfo.used_memory() * 100 / self.sysinfo.total_memory()) as i32);
     }
 
-    fn resize(&mut self, h: i32, w: i32) {
-        self.chart.resize(w, h);
+    fn title(&mut self) -> String {
+        String::from("Memory")
+    }
+}
+impl plugin::Plugin for PluginError {
+    fn display(&mut self, _h: i32, _w: i32) -> String {
+        String::from("An error occured while loading this plugin")
     }
 }
 
@@ -164,7 +166,6 @@ struct Page {
     widgets: Vec<ScreenWidget>,
     focusable_widgets: Vec<i32>
 }
-
 unsafe impl Send for Page {}
 
 
@@ -243,7 +244,7 @@ async fn main() {
                 } else if extern_addon.contains_key(&widget) {
                     let addon_path = &extern_addon[&widget];
                     let lib = &libs[&String::from(addon_path)];
-                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)> = unsafe { lib.get(format!("init_{}_plugin", widget).as_bytes()).unwrap() };
+                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)> = unsafe { lib.get(format!("init_{}", widget).as_bytes()).unwrap() };
                     let tmp = initializer();
                     if tmp.1 {
                         focusable_widgets.push(i);
@@ -263,7 +264,7 @@ async fn main() {
         loop {
             for page in &mut *pages_mutex.lock().await {
                 for el in &mut page.widgets {
-                    el.plugin.update()
+                    el.plugin.on_update()
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(333));
@@ -302,7 +303,11 @@ async fn main() {
                 let current_widget_window = &mut widgets[i];
                 let widget = &mut current_page.widgets[i];
                 current_widget_window.write(&widget.plugin.display(current_widget_window.height - 2, current_widget_window.width - 2));
-                current_widget_window.set_title(widget.name.to_string());
+                let mut title = &widget.plugin.title();
+                if title == "" {
+                    title = &widget.name;
+                }
+                current_widget_window.set_title(title.to_string());
                 current_widget_window.set_border_color(COLOR_PAIR(1));
             }
             if current_page_focusable_widget_count > 1 {
@@ -456,10 +461,10 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
 
 
 fn init_cpuusage_plugin() -> (Box<dyn plugin::Plugin>, bool ){
-    (Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart::new(0, 0, true), sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
+    (Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart{cols: 0, rows: 0, show_percent: true}, sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
 }
 fn init_memory_plugin() -> (Box<dyn plugin::Plugin>, bool) {
-    (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart::new(0,0, true)}), false)
+    (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart{cols: 0, rows: 0, show_percent: true}}), false)
 }
 fn init_process_plugin() -> (Box<dyn plugin::Plugin>, bool) {
     (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false}), true)
