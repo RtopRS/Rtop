@@ -29,7 +29,9 @@ struct MemoryUsage {
     data: Vec<i32>,
     chart: widget::chart::Chart
 }
-struct PluginError {}
+struct PluginError {
+    message: String
+}
 struct CpuUsage {
     sysinfo: sysinfo::System,
     data: Vec<i32>,
@@ -153,8 +155,9 @@ impl plugin::Plugin for MemoryUsage {
     }
 }
 impl plugin::Plugin for PluginError {
-    fn display(&mut self, _h: i32, _w: i32) -> String {
-        String::from("An error occured while loading this plugin")
+    fn display(&mut self, h: i32, w: i32) -> String {
+        let error_message = format!("An error occured: {}", self.message);
+        format!("{}{}{}", String::from("\n").repeat((h / 2) as usize), String::from(" ").repeat((w / 2) as usize - error_message.len() / 2) ,error_message)
     }
 }
 
@@ -227,7 +230,9 @@ async fn main() {
 
     for page in option.pages {
         if page.len() > 4 {
-            pages.lock().await.push(Page{widgets: vec!(ScreenWidget{name: "Error".to_string(), plugin: Box::new(PluginError{})}), focusable_widgets: vec!()})
+            pages.lock().await.push(Page{widgets: vec!(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from("You cannot have more than 4 widgets per pages")})}), focusable_widgets: vec!()})
+        } else if page.len() == 0 {
+            pages.lock().await.push(Page{widgets: vec!(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from("You must add a widget to this page")})}), focusable_widgets: vec!()})
         } else {
             let mut i = 0;
             let mut pages_widgets = vec!();
@@ -244,14 +249,21 @@ async fn main() {
                 } else if extern_addon.contains_key(&widget) {
                     let addon_path = &extern_addon[&widget];
                     let lib = &libs[&String::from(addon_path)];
-                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)> = unsafe { lib.get(format!("init_{}", widget).as_bytes()).unwrap() };
-                    let tmp = initializer();
-                    if tmp.1 {
-                        focusable_widgets.push(i);
+                    let tmp_lib = unsafe { lib.get(format!("init_{}", widget).as_bytes()) };
+                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)>;
+                    if tmp_lib.is_ok() {
+                        initializer = tmp_lib.unwrap();
+                        let tmp = initializer();
+                        if tmp.1 {
+                            focusable_widgets.push(i);
+                        }
+                        pages_widgets.push(ScreenWidget{name: widget, plugin: tmp.0})
+                    } else {
+                        pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Widget {} cannot be loaded. Maybe the plugin is outdated?", widget, ))})})
                     }
-                    pages_widgets.push(ScreenWidget{name: widget, plugin: tmp.0})
+                    
                 } else {
-                    pages_widgets.push(ScreenWidget{name: "Error".to_string(), plugin: Box::new(PluginError{})});
+                    pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Unknow widget {}", widget))})});
                 }
             }
             
@@ -343,8 +355,8 @@ async fn main() {
                 current_widget = 1;
             }
             ncurses::KEY_LEFT => {
-                current_page_number -= 1;
                 let locked_pages = pages.lock().await;
+                current_page_number -= 1;
                 if current_page_number < 1 {
                     current_page_number = 1;
                 }
