@@ -46,6 +46,14 @@ struct ProcessList {
     kill_process_security: bool
 }
 
+struct Test {}
+impl plugin::Plugin for Test {
+    fn display(&mut self, _height: i32, _width: i32) -> String {
+        String::from("common text [[EFFECT_COLOR_GREEN]]green text [[EFFECT_REVERSE]]and he is inverted here [[EFFECT_COLOR_RED]] with red color [[EFFECT_COLOR_RED]][[EFFECT_REVERSE]] and re common text")
+    }
+}
+
+
 impl plugin::Plugin for ProcessList {
     fn on_update(&mut self) {
         self.refresh_progress += 1;
@@ -107,11 +115,10 @@ impl plugin::Plugin for ProcessList {
             self.chart.sort_by("Count");
         } else if key == "d" {
             if self.kill_process_security {
-                self.chart.select(|item| {
-                    for proc in sysinfo::System::new_all().processes_by_exact_name(&item.name) { //replace this by self.sysinfo
-                        proc.kill();
-                    }
-                })
+                let item = self.chart.select();
+                for proc in sysinfo::System::new_all().processes_by_exact_name(&item.name) { //replace this by self.sysinfo
+                    proc.kill();
+                }
             }
             self.kill_process_security = !self.kill_process_security;
         }
@@ -198,6 +205,8 @@ async fn main() {
     builtin_addon.insert("cpu_chart".to_string(), init_cpuusage_plugin);
     builtin_addon.insert("process_list".to_string(), init_process_plugin);
 
+    builtin_addon.insert("test".to_string(), init_test_plugin);
+
     // New Variable for Plugin Rework
     let mut current_page_number = 1;
     let sysinfo = sysinfo::System::new_all();
@@ -223,7 +232,9 @@ async fn main() {
     noecho();
 
     init_pair(1, COLOR_GREEN, -1);
-    init_pair(2, COLOR_BLUE, -1);
+    init_pair(2, COLOR_BLUE, -1); // BLUE
+    init_pair(3, COLOR_RED, -1); // RED
+    init_pair(4, COLOR_GREEN, COLOR_BLACK); // GREEN / BLACK
 
     let pages: std::sync::Arc<tokio::sync::Mutex<std::vec::Vec<Page>>> = std::sync::Arc::new(tokio::sync::Mutex::new(vec!()));
     let pages_mutex = std::sync::Arc::clone(&pages);
@@ -480,4 +491,8 @@ fn init_memory_plugin() -> (Box<dyn plugin::Plugin>, bool) {
 }
 fn init_process_plugin() -> (Box<dyn plugin::Plugin>, bool) {
     (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false}), true)
+}
+
+fn init_test_plugin() -> (Box<dyn plugin::Plugin>, bool) {
+    (Box::new(Test{}), true)
 }

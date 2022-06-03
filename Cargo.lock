@@ -212,9 +212,9 @@ dependencies = [
 
 [[package]]
 name = "rtop_dev"
-version = "0.2.0"
+version = "0.3.0-beta.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc04124e4af3bb43e58b7ac7fd02fbb5d9b3ba5a80833188dcb50e9a8f018be5"
+checksum = "63072215e234aa026e0bff03d42a78954c365949ceb094deafe3d1b8fab4237c"
 
 [[package]]
 name = "ryu"
