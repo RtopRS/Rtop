@@ -62,7 +62,7 @@ impl plugin::Plugin for ProcessList {
             let mut new_process_list = vec!();
             let physical_core_count = self.sysinfo.physical_core_count().unwrap();
 
-            for (_, process) in self.sysinfo.processes() {
+            for process in self.sysinfo.processes().values() {
                 if process_done.contains(&process.name()) {
                     continue;
                 }
@@ -181,7 +181,7 @@ unsafe impl Send for Page {}
 
 #[tokio::main]
 async fn main() {
-    let option: Option = serde_json::from_str(&std::fs::read_to_string(format!("{}/.config/rtop/config", home::home_dir().unwrap().display())).unwrap_or("{}".to_string())).unwrap();
+    let option: Option = serde_json::from_str(&std::fs::read_to_string(format!("{}/.config/rtop/config", home::home_dir().unwrap().display())).unwrap_or_else(|_| "{}".to_string())).unwrap();
 
     // loads all dynamic libs
     let mut libs = std::collections::HashMap::new();
@@ -242,7 +242,7 @@ async fn main() {
     for page in option.pages {
         if page.len() > 4 {
             pages.lock().await.push(Page{widgets: vec!(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from("You cannot have more than 4 widgets per pages")})}), focusable_widgets: vec!()})
-        } else if page.len() == 0 {
+        } else if page.is_empty() {
             pages.lock().await.push(Page{widgets: vec!(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from("You must add a widget to this page")})}), focusable_widgets: vec!()})
         } else {
             let mut i = 0;
@@ -278,7 +278,7 @@ async fn main() {
                 }
             }
             
-            pages.lock().await.push(Page{widgets: pages_widgets, focusable_widgets: focusable_widgets})
+            pages.lock().await.push(Page{widgets: pages_widgets, focusable_widgets})
                 
         }
     }

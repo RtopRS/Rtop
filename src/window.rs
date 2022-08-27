@@ -38,18 +38,18 @@ impl Window {
                 let effect: Vec<&str> = el.split("]]").collect();
 
                 let attr = self.get_attr_from_string(effect[0]);
-                if !attr.is_none() {
+                if attr.is_some() {
                     if effect[0].starts_with("COLOR") {
-                        if color_applied.len() != 0 && color_applied[color_applied.len() - 1] == attr.unwrap() {
+                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr.unwrap() {
                             color_applied.pop();
                         } else {
                             color_applied.push(attr.unwrap());
                         }
                     } else {
-                        if effect_applied.len() != 0 && effect_applied[effect_applied.len() - 1] == attr.unwrap() {
+                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr.unwrap() {
                             effect_applied.pop();
                         } else {
-                            if effect_applied.len() > 0 {
+                            if !effect_applied.is_empty() {
                                 effect_applied.pop();
                             } else {
                                 effect_applied.push(attr.unwrap());
@@ -59,21 +59,21 @@ impl Window {
                 }
 
 
-                if effect_applied.len() == 0 {
+                if effect_applied.is_empty() {
                     wattr_off(self.inner_window, A_ATTRIBUTES());
                 } else {
                     wattr_on(self.inner_window, effect_applied[effect_applied.len() - 1]);
                 }
-                if color_applied.len() == 0 {
+                if color_applied.is_empty() {
                     wattr_on(self.inner_window, self.text_color);
                 } else {
                     wattr_on(self.inner_window, color_applied[color_applied.len() - 1]);
                 }
 
                 let a: String = el.chars().skip(effect[0].len() + 2).collect();
-                waddstr(self.inner_window, &format!("{}", a));
+                waddstr(self.inner_window, &a);
             } else {
-                waddstr(self.inner_window, &format!("{}", el));
+                waddstr(self.inner_window, el);
             }
 
         }
@@ -85,7 +85,7 @@ impl Window {
         wattron(self.curse_window, self.border_color);
         box_(self.curse_window, 0, 0);
         wattroff(self.curse_window, self.border_color);
-        mvwaddstr(self.curse_window, 0, 2, &format!(" "));
+        mvwaddstr(self.curse_window, 0, 2, " ");
 
         let mut color_applied = vec!();
         let mut effect_applied = vec!();
@@ -94,41 +94,39 @@ impl Window {
                 let effect: Vec<&str> = el.split("]]").collect();
 
                 let attr = self.get_attr_from_string(effect[0]);
-                if !attr.is_none() {
+                if attr.is_some() {
                     if effect[0].starts_with("COLOR") {
-                        if color_applied.len() != 0 && color_applied[color_applied.len() - 1] == attr.unwrap() {
+                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr.unwrap() {
                             color_applied.pop();
                         } else {
                             color_applied.push(attr.unwrap());
                         }
                     } else {
-                        if effect_applied.len() != 0 && effect_applied[effect_applied.len() - 1] == attr.unwrap() {
+                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr.unwrap() {
                             effect_applied.pop();
-                        } else {
-                            if effect_applied.len() > 0 {
+                        } else if !effect_applied.is_empty() {
                                 effect_applied.pop();
-                            } else {
-                                effect_applied.push(attr.unwrap());
-                            }
+                        } else {
+                            effect_applied.push(attr.unwrap());
                         }
                     }
                 }
 
-                if effect_applied.len() == 0 {
+                if effect_applied.is_empty() {
                     wattr_off(self.curse_window, A_ATTRIBUTES());
                 } else {
                     wattr_on(self.curse_window, effect_applied[effect_applied.len() - 1]);
                 }
-                if color_applied.len() == 0 {
+                if color_applied.is_empty() {
                     wattr_off(self.curse_window, self.border_color);
                 } else {
                     wattr_on(self.curse_window, color_applied[color_applied.len() - 1]);
                 }
 
                 let a: String = el.chars().skip(effect[0].len() + 2).collect();
-                waddstr(self.curse_window, &format!("{}", a));
+                waddstr(self.curse_window, &a);
             } else {
-                waddstr(self.curse_window, &format!("{}", el));
+                waddstr(self.curse_window, el);
             }
 
         }
@@ -163,17 +161,17 @@ impl Window {
 
     fn get_attr_from_string(&self, attribute: &str) -> std::option::Option<attr_t> {
         if attribute == "REVERSE" {
-            return std::option::Option::from(ncurses::A_REVERSE());
+            std::option::Option::from(ncurses::A_REVERSE())
         } else if attribute == "BOLD" {
-            return std::option::Option::from(ncurses::A_BOLD());
+            std::option::Option::from(ncurses::A_BOLD())
         } else if attribute == "COLOR_GREEN" {
-            return std::option::Option::from(COLOR_PAIR(1))
+            std::option::Option::from(COLOR_PAIR(1))
         } else if attribute == "COLOR_RED" {
-            return std::option::Option::from(COLOR_PAIR(3))
+            std::option::Option::from(COLOR_PAIR(3))
         } else if attribute == "COLOR_GREEN_GREY" {
-            return std::option::Option::from(COLOR_PAIR(4))
+            std::option::Option::from(COLOR_PAIR(4))
         } else if attribute == "COLOR_BLUE" {
-            return std::option::Option::from(COLOR_PAIR(2))
+            std::option::Option::from(COLOR_PAIR(2))
         } else {
             std::option::Option::None
         }
