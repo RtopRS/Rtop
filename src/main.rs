@@ -231,10 +231,14 @@ async fn main() {
     timeout(334);
     noecho();
 
-    init_pair(1, COLOR_GREEN, -1);
-    init_pair(2, COLOR_BLUE, -1); // BLUE
-    init_pair(3, COLOR_RED, -1); // RED
-    init_pair(4, COLOR_GREEN, COLOR_BLACK); // GREEN / BLACK
+    init_pair(1, COLOR_RED, -1);
+    init_pair(2, COLOR_GREEN, -1);
+    init_pair(3, COLOR_YELLOW, -1);
+    init_pair(4, COLOR_BLUE, -1);
+    init_pair(5, COLOR_MAGENTA, -1);
+    init_pair(6, COLOR_CYAN, -1);
+    init_pair(7, COLOR_WHITE, -1);
+    init_pair(8, COLOR_BLACK, -1);
 
     let pages: std::sync::Arc<tokio::sync::Mutex<std::vec::Vec<Page>>> = std::sync::Arc::new(tokio::sync::Mutex::new(vec!()));
     let pages_mutex = std::sync::Arc::clone(&pages);
@@ -302,7 +306,7 @@ async fn main() {
 
     let current_os = sysinfo.name().unwrap();
     attron(ncurses::A_BOLD());
-    attron(COLOR_PAIR(2));
+    attron(COLOR_PAIR(4));
     addstr(" rtop ");
     attrset(ncurses::A_NORMAL());
     addstr(&format!("for {}", current_os));
@@ -331,11 +335,11 @@ async fn main() {
                     title = &widget.name;
                 }
                 current_widget_window.set_title(title.to_string());
-                current_widget_window.set_border_color(COLOR_PAIR(1));
+                current_widget_window.set_border_color(COLOR_PAIR(2));
             }
             if current_page_focusable_widget_count > 1 {
                 let tmp = current_page.focusable_widgets[current_widget - 1];
-                widgets[(tmp as usize) - 1].set_border_color(COLOR_PAIR(2));
+                widgets[(tmp as usize) - 1].set_border_color(COLOR_PAIR(4));
                 widgets[(tmp as usize) - 1].refresh();
             }
             for i in 0..current_page_widget_count {
@@ -380,7 +384,7 @@ async fn main() {
                 getmaxyx(term, &mut height, &mut width);
                 resizeterm(0, 0);
                 attron(ncurses::A_BOLD());
-                attron(COLOR_PAIR(2));
+                attron(COLOR_PAIR(4));
                 addstr(" rtop ");
                 attrset(ncurses::A_NORMAL());
                 addstr(&format!("for {}", current_os));
@@ -434,10 +438,10 @@ fn display_help(win_height: i32) {
 
     for (key, value) in help {
         attron(ncurses::A_BOLD());
-        attron(COLOR_PAIR(2));
+        attron(COLOR_PAIR(4));
         addstr(&format!(" {} ", key));
         attroff(ncurses::A_BOLD());
-        attroff(COLOR_PAIR(2));
+        attroff(COLOR_PAIR(4));
         addstr(&format!("{} ", value));
     }
 }
@@ -462,19 +466,19 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
     let mut widget2;
     let widget3;
     let widget4;
-    widget1 = window::Window::new(win_height, win_width, 0, 1, COLOR_PAIR(1), COLOR_PAIR(2), String::from("1"));
-    widget2 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
+    widget1 = window::Window::new(win_height, win_width, 0, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("1"));
+    widget2 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
     if widget_count == 3 {
-        widget2 = window::Window::new(height - win_height, (width as f32 / 2.).ceil() as i32, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
+        widget2 = window::Window::new(height - win_height, (width as f32 / 2.).ceil() as i32, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
     } else if widget_count == 4 {
-        widget2 = window::Window::new(win_height, width - win_width, win_width, 1, COLOR_PAIR(1), COLOR_PAIR(2), String::from("2"));
+        widget2 = window::Window::new(win_height, width - win_width, win_width, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
     }
     if widget_count == 4 {
-        widget3 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("3"));
+        widget3 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"));
     } else {
-        widget3 = window::Window::new(height - win_height, width - (width as f32 / 2.).ceil() as i32, width - ((width / 2) as i32), 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("3"));
+        widget3 = window::Window::new(height - win_height, width - (width as f32 / 2.).ceil() as i32, width - ((width / 2) as i32), 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"));
     }
-    widget4 = window::Window::new(height - win_height, width - win_width, win_width, 1 + win_height, COLOR_PAIR(1), COLOR_PAIR(2), String::from("4"));
+    widget4 = window::Window::new(height - win_height, width - win_width, win_width, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("4"));
     widgets.push(widget1);
     widgets.push(widget2);
     widgets.push(widget3);

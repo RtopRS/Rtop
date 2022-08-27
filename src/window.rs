@@ -160,20 +160,49 @@ impl Window {
     }
 
     fn get_attr_from_string(&self, attribute: &str) -> std::option::Option<attr_t> {
-        if attribute == "REVERSE" {
-            std::option::Option::from(ncurses::A_REVERSE())
-        } else if attribute == "BOLD" {
-            std::option::Option::from(ncurses::A_BOLD())
-        } else if attribute == "COLOR_GREEN" {
-            std::option::Option::from(COLOR_PAIR(1))
-        } else if attribute == "COLOR_RED" {
-            std::option::Option::from(COLOR_PAIR(3))
-        } else if attribute == "COLOR_GREEN_GREY" {
-            std::option::Option::from(COLOR_PAIR(4))
-        } else if attribute == "COLOR_BLUE" {
-            std::option::Option::from(COLOR_PAIR(2))
+        let mut tmp = attribute.chars().collect::<Vec<char>>();
+        tmp.retain(|&c| c == '_');
+
+        if attribute.starts_with("COLOR_") && tmp.len() == 2 {
+            let foreground = match attribute.split('_').collect::<Vec<&str>>()[1] {
+                "RED" => COLOR_RED,
+                "GREEN" => COLOR_GREEN,
+                "YELLOW" => COLOR_YELLOW,
+                "BLUE" => COLOR_BLUE,
+                "MAGENTA" => COLOR_MAGENTA,
+                "CYAN" => COLOR_CYAN,
+                "WHITE" => COLOR_WHITE,
+                "BLACK" => COLOR_BLACK,
+                _ => -1
+            };
+            let background = match attribute.split('_').collect::<Vec<&str>>()[2] {
+                "RED" => COLOR_RED,
+                "GREEN" => COLOR_GREEN,
+                "YELLOW" => COLOR_YELLOW,
+                "BLUE" => COLOR_BLUE,
+                "MAGENTA" => COLOR_MAGENTA,
+                "CYAN" => COLOR_CYAN,
+                "WHITE" => COLOR_WHITE,
+                "BLACK" => COLOR_BLACK,
+                _ => -1
+            };
+            
+            init_pair(10, foreground, background);
+            std::option::Option::from(COLOR_PAIR(10))
         } else {
-            std::option::Option::None
+            match attribute {
+                "REVERSE" => std::option::Option::from(ncurses::A_REVERSE()),
+                "BOLD" => std::option::Option::from(ncurses::A_BOLD()),
+                "COLOR_RED" => std::option::Option::from(COLOR_PAIR(1)),
+                "COLOR_GREEN" => std::option::Option::from(COLOR_PAIR(2)),
+                "COLOR_YELLOW" => std::option::Option::from(COLOR_PAIR(3)),
+                "COLOR_BLUE" => std::option::Option::from(COLOR_PAIR(4)),
+                "COLOR_MAGENTA" => std::option::Option::from(COLOR_PAIR(5)),
+                "COLOR_CYAN" => std::option::Option::from(COLOR_PAIR(6)),
+                "COLOR_WHITE" => std::option::Option::from(COLOR_PAIR(7)),
+                "COLOR_BLACK" => std::option::Option::from(COLOR_PAIR(8)),
+                _ => std::option::Option::None 
+            }
         }
     }
 }
