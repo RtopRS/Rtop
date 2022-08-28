@@ -5,6 +5,7 @@ use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 use serde::Deserialize;
 use rtop_rs::window;
 
+type WidgetInitializerResult<'a> = std::result::Result<libloading::Symbol<'a, fn() -> (Box<dyn plugin::Plugin>, bool)>, libloading::Error>;
 
 fn default_pages() -> Vec<Vec<String>> {
     vec!(vec!("cpu_chart".to_string(), "memory_chart".to_string(), "process_list".to_string()))
@@ -21,8 +22,13 @@ struct LibOption {
     #[serde(default)]
     path: String,
     #[serde(default)]
-    provided_widgets: Vec<String>
+    name: String
 }
+
+
+
+
+
 
 struct MemoryUsage {
     sysinfo: sysinfo::System,
@@ -44,13 +50,6 @@ struct ProcessList {
     chart: widget::listview::ListView,
     refresh_progress: usize,
     kill_process_security: bool
-}
-
-struct Test {}
-impl plugin::Plugin for Test {
-    fn display(&mut self, _height: i32, _width: i32) -> String {
-        String::from("common text [[EFFECT_COLOR_GREEN]]green text [[EFFECT_REVERSE]]and he is inverted here [[EFFECT_COLOR_RED]] with red color [[EFFECT_COLOR_RED]][[EFFECT_REVERSE]] and re common text")
-    }
 }
 
 
@@ -182,21 +181,16 @@ unsafe impl Send for Page {}
 #[tokio::main]
 async fn main() {
     let option: Option = serde_json::from_str(&std::fs::read_to_string(format!("{}/.config/rtop/config", home::home_dir().unwrap().display())).unwrap_or_else(|_| "{}".to_string())).unwrap();
-
-    // loads all dynamic libs
-    let mut libs = std::collections::HashMap::new();
-    let mut extern_addon = std::collections::HashMap::new();
-    for lib in option.plugins {
+    
+    let mut plugins = std::collections::HashMap::new(); // 0: name  1: dylib
+    for plugin in option.plugins {
         unsafe {
-            let loaded_lib = libloading::Library::new(String::from(&lib.path));
-            if loaded_lib.is_ok() {
-                libs.insert(String::from(&lib.path), loaded_lib.unwrap());
+            let plugin_in_load = libloading::Library::new(String::from(&plugin.path));
+            if plugin_in_load.is_ok() {
+                plugins.insert(plugin.name, plugin_in_load.unwrap());
             } else {
                 continue;
             }
-        }
-        for widget in lib.provided_widgets {
-            extern_addon.insert(widget, String::from(&lib.path));
         }
     }
 
@@ -205,9 +199,6 @@ async fn main() {
     builtin_addon.insert("cpu_chart".to_string(), init_cpuusage_plugin);
     builtin_addon.insert("process_list".to_string(), init_process_plugin);
 
-    builtin_addon.insert("test".to_string(), init_test_plugin);
-
-    // New Variable for Plugin Rework
     let mut current_page_number = 1;
     let sysinfo = sysinfo::System::new_all();
     let mut current_widget = 1;
@@ -261,29 +252,30 @@ async fn main() {
                         focusable_widgets.push(i);
                     }
                     pages_widgets.push(ScreenWidget{name: String::from(&widget), plugin: tmp.0 });
-                } else if extern_addon.contains_key(&widget) {
-                    let addon_path = &extern_addon[&widget];
-                    let lib = &libs[&String::from(addon_path)];
-                    let tmp_lib = unsafe { lib.get(format!("init_{}", widget).as_bytes()) };
-                    let initializer: libloading::Symbol<extern "Rust" fn() -> (Box<dyn plugin::Plugin>, bool)>;
-                    if tmp_lib.is_ok() {
-                        initializer = tmp_lib.unwrap();
-                        let tmp = initializer();
-                        if tmp.1 {
-                            focusable_widgets.push(i);
-                        }
-                        pages_widgets.push(ScreenWidget{name: widget, plugin: tmp.0})
-                    } else {
-                        pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Widget {} cannot be loaded. Maybe the plugin is outdated?", widget, ))})})
-                    }
-                    
+
                 } else {
-                    pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Unknow widget {}", widget))})});
+                    let tmp = &widget.split('.').collect::<Vec<&str>>();
+                    let plugin = plugins.get(tmp[0]);
+
+                    if let Some(plugin) = plugin {
+                        let initializer: WidgetInitializerResult = unsafe { plugin.get(format!("init_{}", tmp[1]).as_bytes()) };
+
+                        if let Ok(initializer) = initializer {
+                            let created_widget = initializer();
+                            if created_widget.1 {
+                                focusable_widgets.push(i);
+                            }
+                            pages_widgets.push(ScreenWidget{name: widget, plugin: created_widget.0})
+                        } else {
+                            pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Unknow widget {} in plugin {}", tmp[1], tmp[0]))})});
+                        }
+                    } else {
+                        pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Unable to find plugin {}", tmp[0]))})});
+                    }   
                 }
             }
             
-            pages.lock().await.push(Page{widgets: pages_widgets, focusable_widgets})
-                
+            pages.lock().await.push(Page{widgets: pages_widgets, focusable_widgets})    
         }
     }
 
@@ -495,8 +487,4 @@ fn init_memory_plugin() -> (Box<dyn plugin::Plugin>, bool) {
 }
 fn init_process_plugin() -> (Box<dyn plugin::Plugin>, bool) {
     (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false}), true)
-}
-
-fn init_test_plugin() -> (Box<dyn plugin::Plugin>, bool) {
-    (Box::new(Test{}), true)
 }
