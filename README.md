@@ -24,7 +24,7 @@
 ## Features
 * Lightweight < 1MB
 * Responsive UI
-* Work on Linux and MacOS
+* Work on Linux
 * Easy to Use
 * Designed for You
 * Extensible with an [API](https://github.com/RTopRS/RtopDev)
@@ -48,7 +48,7 @@ Now switch to project folder and compile a release:
 cd RTop && cargo build --release
 ```
 
-Your executable will be in the `target/release/` folder, it is named `rtop-rs`.
+Your executable will be in the `target/release/` folder, it is named `rtop`.
 
 ## Option file
 You can customize Rtop as like you want!

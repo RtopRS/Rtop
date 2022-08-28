@@ -24,3 +24,7 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"]}
 home = "0.5.3"
 rtop_dev = "0.3.0-beta.0"
+
+[[bin]]
+name = "rtop"
+path = "src/main.rs"
