@@ -193,6 +193,9 @@ impl Window {
             match attribute {
                 "REVERSE" => std::option::Option::from(ncurses::A_REVERSE()),
                 "BOLD" => std::option::Option::from(ncurses::A_BOLD()),
+                "ITALIC" => std::option::Option::from(ncurses::A_ITALIC()),
+                "DIMMED" => std::option::Option::from(ncurses::A_DIM()),
+                "UNDERLINE" => std::option::Option::from(ncurses::A_UNDERLINE()),
                 "COLOR_RED" => std::option::Option::from(COLOR_PAIR(1)),
                 "COLOR_GREEN" => std::option::Option::from(COLOR_PAIR(2)),
                 "COLOR_YELLOW" => std::option::Option::from(COLOR_PAIR(3)),

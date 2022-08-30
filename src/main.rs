@@ -5,7 +5,7 @@ use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 use serde::Deserialize;
 use rtop_rs::window;
 
-type WidgetInitializerResult<'a> = std::result::Result<libloading::Symbol<'a, fn() -> (Box<dyn plugin::Plugin>, bool)>, libloading::Error>;
+type WidgetInitializerResult<'a> = std::result::Result<libloading::Symbol<'a, fn() -> (Box<dyn widget::Widget>, bool)>, libloading::Error>;
 
 fn default_pages() -> Vec<Vec<String>> {
     vec!(vec!("cpu_chart".to_string(), "memory_chart".to_string(), "process_list".to_string()))
@@ -26,14 +26,10 @@ struct LibOption {
 }
 
 
-
-
-
-
 struct MemoryUsage {
     sysinfo: sysinfo::System,
     data: Vec<i32>,
-    chart: widget::chart::Chart
+    chart: components::chart::Chart
 }
 struct PluginError {
     message: String
@@ -41,19 +37,19 @@ struct PluginError {
 struct CpuUsage {
     sysinfo: sysinfo::System,
     data: Vec<i32>,
-    chart: widget::chart::Chart,
+    chart: components::chart::Chart,
     last_cpu_usage: f32
 }
 struct ProcessList {
     sysinfo: sysinfo::System,
-    data: Vec<widget::listview::ListItem>,
-    chart: widget::listview::ListView,
+    data: Vec<components::listview::ListItem>,
+    chart: components::listview::ListView,
     refresh_progress: usize,
     kill_process_security: bool
 }
 
 
-impl plugin::Plugin for ProcessList {
+impl widget::Widget for ProcessList {
     fn on_update(&mut self) {
         self.refresh_progress += 1;
         if self.refresh_progress == 7 {
@@ -80,7 +76,7 @@ impl plugin::Plugin for ProcessList {
                 process_data.insert("Count".to_string(), count.to_string());
                 process_data.insert("Memory %".to_string(), format!("{:.1}", (total_memory as f32 * 100. / self.sysinfo.total_memory() as f32)));
 
-                new_process_list.push(widget::listview::ListItem::new(process.name(), &process_data));
+                new_process_list.push(components::listview::ListItem::new(process.name(), &process_data));
             }
 
             self.data = new_process_list;
@@ -105,13 +101,13 @@ impl plugin::Plugin for ProcessList {
         } else if key == "G" {
             self.chart.to_last();
         } else if key == "m" {
-            self.chart.sort_by("Memory %");
+            self.chart.sort_by(std::option::Option::from(String::from("Memory %")), std::option::Option::from(std::cmp::Ordering::Greater));
         } else if key == "c" {
-            self.chart.sort_by("CPU %");
+            self.chart.sort_by(std::option::Option::from(String::from("CPU %")), std::option::Option::from(std::cmp::Ordering::Greater));
         } else if key == "n" {
-            self.chart.sort_by("Name");
+            self.chart.sort_by(std::option::Option::from(String::from("Name")), std::option::Option::from(std::cmp::Ordering::Less));
         } else if key == "C" {
-            self.chart.sort_by("Count");
+            self.chart.sort_by(std::option::Option::from(String::from("Count")), std::option::Option::from(std::cmp::Ordering::Greater));
         } else if key == "d" {
             if self.kill_process_security {
                 let item = self.chart.select();
@@ -126,11 +122,11 @@ impl plugin::Plugin for ProcessList {
         }
     }
 
-    fn title(&mut self) -> String {
-        String::from("Processes")
+    fn title(&mut self) -> std::option::Option<String> {
+        Some(format!("[{}] Processes", self.data.len()))
     }
 }
-impl plugin::Plugin for CpuUsage {
+impl widget::Widget for CpuUsage {
     fn on_update(&mut self) {
         self.sysinfo.refresh_cpu();
         self.data.push(((self.sysinfo.global_processor_info().cpu_usage() + self.last_cpu_usage) / 2.) as i32)
@@ -141,11 +137,11 @@ impl plugin::Plugin for CpuUsage {
         self.chart.display(&self.data)
     }
 
-    fn title(&mut self) -> String {
-        String::from("CPU Usage")
+    fn title(&mut self) -> std::option::Option<String> {
+        Some(String::from("CPU Usage"))
     }
 }
-impl plugin::Plugin for MemoryUsage {
+impl widget::Widget for MemoryUsage {
     fn display(&mut self, h: i32, w: i32) -> String {
         self.chart.resize(w, h);
         self.chart.display(&self.data)
@@ -156,11 +152,11 @@ impl plugin::Plugin for MemoryUsage {
         self.data.push((self.sysinfo.used_memory() * 100 / self.sysinfo.total_memory()) as i32);
     }
 
-    fn title(&mut self) -> String {
-        String::from("Memory")
+    fn title(&mut self) -> std::option::Option<String> {
+        Some(String::from("Memory"))
     }
 }
-impl plugin::Plugin for PluginError {
+impl widget::Widget for PluginError {
     fn display(&mut self, h: i32, w: i32) -> String {
         let error_message = format!("An error occured: {}", self.message);
         format!("{}{}{}", String::from("\n").repeat((h / 2) as usize), String::from(" ").repeat((w / 2) as usize - error_message.len() / 2) ,error_message)
@@ -168,7 +164,7 @@ impl plugin::Plugin for PluginError {
 }
 
 struct ScreenWidget {
-    plugin: Box<dyn plugin::Plugin>,
+    plugin: Box<dyn widget::Widget>,
     name: String
 }
 struct Page {
@@ -180,6 +176,15 @@ unsafe impl Send for Page {}
 
 #[tokio::main]
 async fn main() {
+    let default_panic = std::panic::take_hook(); // Handle error, work only with builtin-plugin
+    std::panic::set_hook(Box::new(move |info| {  // TODO: Make this work for plugin
+        curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_VISIBLE);
+        endwin();
+        default_panic(info);
+        std::process::exit(1);
+    }));
+
+
     let option: Option = serde_json::from_str(&std::fs::read_to_string(format!("{}/.config/rtop/config", home::home_dir().unwrap().display())).unwrap_or_else(|_| "{}".to_string())).unwrap();
     
     let mut plugins = std::collections::HashMap::new(); // 0: name  1: dylib
@@ -194,10 +199,10 @@ async fn main() {
         }
     }
 
-    let mut builtin_addon: std::collections::HashMap<String, fn() -> (Box<dyn plugin::Plugin>, bool)> = std::collections::HashMap::new();
-    builtin_addon.insert("memory_chart".to_string(), init_memory_plugin);
-    builtin_addon.insert("cpu_chart".to_string(), init_cpuusage_plugin);
-    builtin_addon.insert("process_list".to_string(), init_process_plugin);
+    let mut builtin_addon: std::collections::HashMap<String, fn() -> (Box<dyn widget::Widget>, bool)> = std::collections::HashMap::new();
+    builtin_addon.insert(String::from("memory_chart"), init_memory_plugin);
+    builtin_addon.insert(String::from("cpu_chart"), init_cpuusage_plugin);
+    builtin_addon.insert(String::from("process_list"), init_process_plugin);
 
     let mut current_page_number = 1;
     let sysinfo = sysinfo::System::new_all();
@@ -205,7 +210,7 @@ async fn main() {
 
     let locale = setlocale(LcCategory::all, "");
     if !locale.contains("UTF-8") {
-        println!("You need to suppoort UTF-8");
+        println!("You need to have a terminal that support UTF-8");
         return;
     }
 
@@ -322,11 +327,13 @@ async fn main() {
                 let current_widget_window = &mut widgets[i];
                 let widget = &mut current_page.widgets[i];
                 current_widget_window.write(&widget.plugin.display(current_widget_window.height - 2, current_widget_window.width - 2));
-                let mut title = &widget.plugin.title();
-                if title == "" {
-                    title = &widget.name;
+                let title = &widget.plugin.title();
+                if let Some(title) = title {
+                    current_widget_window.set_title(String::from(title));
+                } else {
+                    current_widget_window.set_title(String::from(&widget.name));
                 }
-                current_widget_window.set_title(title.to_string());
+
                 current_widget_window.set_border_color(COLOR_PAIR(2));
             }
             if current_page_focusable_widget_count > 1 {
@@ -439,8 +446,8 @@ fn display_help(win_height: i32) {
 }
 
 fn exit() {
-    endwin();
     curs_set(ncurses::CURSOR_VISIBILITY::CURSOR_VISIBLE);
+    endwin();
     std::process::exit(0);
 }
 
@@ -453,17 +460,17 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
     if widget_count == 4 {
         win_width = width / 2;
     }
-    let mut widgets = vec!();
     let widget1;
-    let mut widget2;
+    let widget2;
     let widget3;
     let widget4;
     widget1 = window::Window::new(win_height, win_width, 0, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("1"));
-    widget2 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
     if widget_count == 3 {
         widget2 = window::Window::new(height - win_height, (width as f32 / 2.).ceil() as i32, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
     } else if widget_count == 4 {
         widget2 = window::Window::new(win_height, width - win_width, win_width, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
+    } else {
+        widget2 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
     }
     if widget_count == 4 {
         widget3 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"));
@@ -471,20 +478,17 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
         widget3 = window::Window::new(height - win_height, width - (width as f32 / 2.).ceil() as i32, width - ((width / 2) as i32), 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"));
     }
     widget4 = window::Window::new(height - win_height, width - win_width, win_width, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("4"));
-    widgets.push(widget1);
-    widgets.push(widget2);
-    widgets.push(widget3);
-    widgets.push(widget4);
-    widgets
+    
+    vec!(widget1, widget2, widget3, widget4)
 }
 
 
-fn init_cpuusage_plugin() -> (Box<dyn plugin::Plugin>, bool ){
-    (Box::new(CpuUsage{data: Vec::new(), chart: widget::chart::Chart{cols: 0, rows: 0, show_percent: true}, sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
+fn init_cpuusage_plugin() -> (Box<dyn widget::Widget>, bool ){
+    (Box::new(CpuUsage{data: Vec::new(), chart: components::chart::Chart::new(0, 0, None, Some(true), None), sysinfo: sysinfo::System::new_all(), last_cpu_usage: 0.}), false)
 }
-fn init_memory_plugin() -> (Box<dyn plugin::Plugin>, bool) {
-    (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::chart::Chart{cols: 0, rows: 0, show_percent: true}}), false)
+fn init_memory_plugin() -> (Box<dyn widget::Widget>, bool) {
+    (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: components::chart::Chart::new(0, 0, None, Some(true), None)}), false)
 }
-fn init_process_plugin() -> (Box<dyn plugin::Plugin>, bool) {
-    (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: widget::listview::ListView::new(0, 0, &Vec::new(), "Name", vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string())), refresh_progress: 6, kill_process_security: false}), true)
+fn init_process_plugin() -> (Box<dyn widget::Widget>, bool) {
+    (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: components::listview::ListView::new(0, 0, &Vec::new(), String::from("Name"), vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()), std::option::Option::from(String::from("Name")), std::option::Option::from(std::cmp::Ordering::Less)), refresh_progress: 6, kill_process_security: false}), true)
 }
