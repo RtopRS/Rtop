@@ -38,22 +38,20 @@ impl Window {
                 let effect: Vec<&str> = el.split("]]").collect();
 
                 let attr = self.get_attr_from_string(effect[0]);
-                if attr.is_some() {
+                if let Some(attr) = attr {
                     if effect[0].starts_with("COLOR") {
-                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr.unwrap() {
+                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr {
                             color_applied.pop();
                         } else {
-                            color_applied.push(attr.unwrap());
+                            color_applied.push(attr);
                         }
                     } else {
-                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr.unwrap() {
+                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr {
+                            effect_applied.pop();
+                        } else if !effect_applied.is_empty() {
                             effect_applied.pop();
                         } else {
-                            if !effect_applied.is_empty() {
-                                effect_applied.pop();
-                            } else {
-                                effect_applied.push(attr.unwrap());
-                            }
+                            effect_applied.push(attr);
                         }
                     }
                 }
@@ -94,20 +92,20 @@ impl Window {
                 let effect: Vec<&str> = el.split("]]").collect();
 
                 let attr = self.get_attr_from_string(effect[0]);
-                if attr.is_some() {
+                if let Some(attr) = attr {
                     if effect[0].starts_with("COLOR") {
-                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr.unwrap() {
+                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr {
                             color_applied.pop();
                         } else {
-                            color_applied.push(attr.unwrap());
+                            color_applied.push(attr);
                         }
                     } else {
-                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr.unwrap() {
+                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr {
                             effect_applied.pop();
                         } else if !effect_applied.is_empty() {
                                 effect_applied.pop();
                         } else {
-                            effect_applied.push(attr.unwrap());
+                            effect_applied.push(attr);
                         }
                     }
                 }

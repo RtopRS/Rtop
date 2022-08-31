@@ -111,7 +111,7 @@ impl widget::Widget for ProcessList {
         } else if key == "d" {
             if self.kill_process_security {
                 let item = self.chart.select();
-                for proc in sysinfo::System::new_all().processes_by_exact_name(&item.name) { //replace this by self.sysinfo
+                for proc in self.sysinfo.processes_by_exact_name(&item.name) {
                     proc.kill();
                 }
             }
