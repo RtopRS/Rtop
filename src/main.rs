@@ -4,8 +4,10 @@ use chrono::Timelike;
 use sysinfo::{ProcessExt, SystemExt, ProcessorExt};
 use serde::Deserialize;
 use rtop_rs::window;
+use rtop_dev::components::listview::*;
 
-type WidgetInitializerResult<'a> = std::result::Result<libloading::Symbol<'a, fn() -> (Box<dyn widget::Widget>, bool)>, libloading::Error>;
+type WidgetInitializer = fn() -> (Box<dyn widget::Widget>, bool);
+type WidgetInitializerResult<'a> = std::result::Result<libloading::Symbol<'a, WidgetInitializer>, libloading::Error>;
 
 fn default_pages() -> Vec<Vec<String>> {
     vec!(vec!("cpu_chart".to_string(), "memory_chart".to_string(), "process_list".to_string()))
@@ -101,13 +103,13 @@ impl widget::Widget for ProcessList {
         } else if key == "G" {
             self.chart.to_last();
         } else if key == "m" {
-            self.chart.sort_by(std::option::Option::from(String::from("Memory %")), std::option::Option::from(std::cmp::Ordering::Greater));
+            self.chart.sort_by(std::option::Option::from(String::from("Memory %")), std::option::Option::from(Ordering::Default));
         } else if key == "c" {
-            self.chart.sort_by(std::option::Option::from(String::from("CPU %")), std::option::Option::from(std::cmp::Ordering::Greater));
+            self.chart.sort_by(std::option::Option::from(String::from("CPU %")), std::option::Option::from(Ordering::Default));
         } else if key == "n" {
-            self.chart.sort_by(std::option::Option::from(String::from("Name")), std::option::Option::from(std::cmp::Ordering::Less));
+            self.chart.sort_by(std::option::Option::from(String::from("Name")), std::option::Option::from(Ordering::Inversed));
         } else if key == "C" {
-            self.chart.sort_by(std::option::Option::from(String::from("Count")), std::option::Option::from(std::cmp::Ordering::Greater));
+            self.chart.sort_by(std::option::Option::from(String::from("Count")), std::option::Option::from(Ordering::Default));
         } else if key == "d" {
             if self.kill_process_security {
                 let item = self.chart.select();
@@ -191,15 +193,15 @@ async fn main() {
     for plugin in option.plugins {
         unsafe {
             let plugin_in_load = libloading::Library::new(String::from(&plugin.path));
-            if plugin_in_load.is_ok() {
-                plugins.insert(plugin.name, plugin_in_load.unwrap());
+            if let Ok(plugin_in_load) = plugin_in_load {
+                plugins.insert(plugin.name, plugin_in_load);
             } else {
                 continue;
             }
         }
     }
 
-    let mut builtin_addon: std::collections::HashMap<String, fn() -> (Box<dyn widget::Widget>, bool)> = std::collections::HashMap::new();
+    let mut builtin_addon: std::collections::HashMap<String, WidgetInitializer> = std::collections::HashMap::new();
     builtin_addon.insert(String::from("memory_chart"), init_memory_plugin);
     builtin_addon.insert(String::from("cpu_chart"), init_cpuusage_plugin);
     builtin_addon.insert(String::from("process_list"), init_process_plugin);
@@ -272,10 +274,10 @@ async fn main() {
                             }
                             pages_widgets.push(ScreenWidget{name: widget, plugin: created_widget.0})
                         } else {
-                            pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Unknow widget {} in plugin {}", tmp[1], tmp[0]))})});
+                            pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: format!("Unknow widget {} in plugin {}", tmp[1], tmp[0])})});
                         }
                     } else {
-                        pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: String::from(format!("Unable to find plugin {}", tmp[0]))})});
+                        pages_widgets.push(ScreenWidget{name: String::from("Error"), plugin: Box::new(PluginError{message: format!("Unable to find plugin {}", tmp[0])})});
                     }   
                 }
             }
@@ -323,26 +325,25 @@ async fn main() {
                 current_widget = 0;
             }
 
-            for i in 0..current_page_widget_count { // display all current page's widget
-                let current_widget_window = &mut widgets[i];
+            for (i, item) in widgets.iter_mut().enumerate().take(current_page_widget_count) {
                 let widget = &mut current_page.widgets[i];
-                current_widget_window.write(&widget.plugin.display(current_widget_window.height - 2, current_widget_window.width - 2));
+                item.write(&widget.plugin.display(item.height - 2, item.width - 4));
                 let title = &widget.plugin.title();
                 if let Some(title) = title {
-                    current_widget_window.set_title(String::from(title));
+                    item.set_title(String::from(title));
                 } else {
-                    current_widget_window.set_title(String::from(&widget.name));
+                    item.set_title(String::from(&widget.name));
                 }
 
-                current_widget_window.set_border_color(COLOR_PAIR(2));
+                item.set_border_color(COLOR_PAIR(2));
             }
             if current_page_focusable_widget_count > 1 {
                 let tmp = current_page.focusable_widgets[current_widget - 1];
                 widgets[(tmp as usize) - 1].set_border_color(COLOR_PAIR(4));
                 widgets[(tmp as usize) - 1].refresh();
             }
-            for i in 0..current_page_widget_count {
-                widgets[i].refresh();
+            for widget in widgets.iter().take(current_page_widget_count) {
+                widget.refresh();
             }
 
         }
@@ -460,24 +461,21 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
     if widget_count == 4 {
         win_width = width / 2;
     }
-    let widget1;
-    let widget2;
-    let widget3;
-    let widget4;
-    widget1 = window::Window::new(win_height, win_width, 0, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("1"));
-    if widget_count == 3 {
-        widget2 = window::Window::new(height - win_height, (width as f32 / 2.).ceil() as i32, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
+
+    let widget1 = window::Window::new(win_height, win_width, 0, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("1"));
+    let widget2 = if widget_count == 3 {
+        window::Window::new(height - win_height, (width as f32 / 2.).ceil() as i32, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"))
     } else if widget_count == 4 {
-        widget2 = window::Window::new(win_height, width - win_width, win_width, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
+        window::Window::new(win_height, width - win_width, win_width, 1, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"))
     } else {
-        widget2 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"));
-    }
-    if widget_count == 4 {
-        widget3 = window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"));
+        window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("2"))
+    };
+    let widget3 = if widget_count == 4 {
+        window::Window::new(height - win_height, win_width, 0, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"))
     } else {
-        widget3 = window::Window::new(height - win_height, width - (width as f32 / 2.).ceil() as i32, width - ((width / 2) as i32), 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"));
-    }
-    widget4 = window::Window::new(height - win_height, width - win_width, win_width, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("4"));
+        window::Window::new(height - win_height, width - (width as f32 / 2.).ceil() as i32, width - ((width / 2) as i32), 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("3"))
+    };
+    let widget4 = window::Window::new(height - win_height, width - win_width, win_width, 1 + win_height, COLOR_PAIR(2), COLOR_PAIR(4), String::from("4"));
     
     vec!(widget1, widget2, widget3, widget4)
 }
@@ -490,5 +488,5 @@ fn init_memory_plugin() -> (Box<dyn widget::Widget>, bool) {
     (Box::new(MemoryUsage{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: components::chart::Chart::new(0, 0, None, Some(true), None)}), false)
 }
 fn init_process_plugin() -> (Box<dyn widget::Widget>, bool) {
-    (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: components::listview::ListView::new(0, 0, &Vec::new(), String::from("Name"), vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()), std::option::Option::from(String::from("Name")), std::option::Option::from(std::cmp::Ordering::Less)), refresh_progress: 6, kill_process_security: false}), true)
+    (Box::new(ProcessList{sysinfo: sysinfo::System::new_all(), data: vec!(), chart: components::listview::ListView::new(0, 0, &Vec::new(), String::from("Name"), vec!("CPU %".to_string(), "Count".to_string(), "Memory %".to_string()), std::option::Option::from(String::from("Name")), std::option::Option::from(Ordering::Inversed)), refresh_progress: 6, kill_process_security: false}), true)
 }

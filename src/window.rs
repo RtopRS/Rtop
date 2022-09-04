@@ -1,4 +1,6 @@
 use ncurses::*;
+use std::fmt::Write;
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct Window {
     pub height: i32,
@@ -15,7 +17,7 @@ pub struct Window {
 impl Window {
     pub fn new(height: i32, width: i32, x: i32, y: i32, border_color: attr_t, text_color: attr_t, title: String) -> Window {
         let win_box = newwin(height, width, y, x);
-        let win_inner = derwin(win_box, height - 2, width - 2, 1, 1);
+        let win_inner = derwin(win_box, height - 2, width - 4, 1, 2);
         let new_win = Window{height, width, x, y, curse_window: win_box, inner_window: win_inner, text_color, border_color, title};
         wattrset(new_win.inner_window, text_color);
         new_win.draw_border();
@@ -33,7 +35,36 @@ impl Window {
         let mut color_applied = vec!();
         let mut effect_applied = vec!();
 
-        for el in content.split("[[EFFECT_").collect::<Vec<&str>>() {
+        let mut trimmed_text = String::new();
+        let mut formated_string = String::new();
+
+        for part in content.split("[[EFFECT_").collect::<Vec<&str>>() {
+            if part.contains("]]") {
+                let effect: Vec<&str> = part.split("]]").collect();
+
+                let aa: String = part.chars().skip(effect[0].len() + 2).collect();
+                trimmed_text += &aa;
+            } else {
+                trimmed_text += part;
+            }
+        }
+
+        for (i, line) in trimmed_text.split('\n').into_iter().enumerate() {
+            if line.graphemes(true).count() == self.width as usize - 4 && line.ends_with('\n') {
+
+                let tmp = content.split('\n').collect::<Vec<&str>>()[i].split("");
+
+                formated_string += &tmp.take(line.graphemes(true).count() - 1).into_iter().collect::<String>();
+            } else if line.graphemes(true).count() == self.width as usize - 4 {
+                formated_string += content.split('\n').collect::<Vec<&str>>()[i];
+            } else {
+                writeln!(&mut formated_string, "{}", content.split('\n').collect::<Vec<&str>>()[i]).unwrap();
+            }
+        }
+
+
+
+        for el in formated_string.split("[[EFFECT_").collect::<Vec<&str>>() {
             if el.contains("]]") {
                 let effect: Vec<&str> = el.split("]]").collect();
 
@@ -45,14 +76,10 @@ impl Window {
                         } else {
                             color_applied.push(attr);
                         }
+                    } else if !effect_applied.is_empty() {
+                        effect_applied.pop();
                     } else {
-                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr {
-                            effect_applied.pop();
-                        } else if !effect_applied.is_empty() {
-                            effect_applied.pop();
-                        } else {
-                            effect_applied.push(attr);
-                        }
+                        effect_applied.push(attr);
                     }
                 }
 
@@ -67,9 +94,8 @@ impl Window {
                 } else {
                     wattr_on(self.inner_window, color_applied[color_applied.len() - 1]);
                 }
-
-                let a: String = el.chars().skip(effect[0].len() + 2).collect();
-                waddstr(self.inner_window, &a);
+                let aa: String = el.chars().skip(effect[0].len() + 2).collect();
+                waddstr(self.inner_window, &aa);
             } else {
                 waddstr(self.inner_window, el);
             }
@@ -99,14 +125,10 @@ impl Window {
                         } else {
                             color_applied.push(attr);
                         }
+                    } else if !effect_applied.is_empty() {
+                        effect_applied.pop();
                     } else {
-                        if !effect_applied.is_empty() && effect_applied[effect_applied.len() - 1] == attr {
-                            effect_applied.pop();
-                        } else if !effect_applied.is_empty() {
-                                effect_applied.pop();
-                        } else {
-                            effect_applied.push(attr);
-                        }
+                        effect_applied.push(attr);
                     }
                 }
 
@@ -185,8 +207,8 @@ impl Window {
                 _ => -1
             };
             
-            init_pair(10, foreground, background);
-            std::option::Option::from(COLOR_PAIR(10))
+            init_pair(foreground * 10 + background, foreground, background);
+            std::option::Option::from(COLOR_PAIR(foreground * 10 + background))
         } else {
             match attribute {
                 "REVERSE" => std::option::Option::from(ncurses::A_REVERSE()),

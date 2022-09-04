@@ -1,6 +1,6 @@
 [package]
 name = "rtop-rs"
-version = "1.1.0-beta.3"
+version = "1.1.0-beta.4"
 authors = ["SquitchYT<contact@squitch.fr>"]
 edition = "2021"
 description = "Faster and better alternative to Vtop written in Rust."
@@ -25,6 +25,7 @@ serde = { version = "1.0", features = ["derive"]}
 home = "0.5.3"
 #rtop_dev = "0.3.0-beta.0"
 rtop_dev = { path = "../RtopDev" }
+unicode-segmentation = "1.9.0"
 
 [[bin]]
 name = "rtop"
