@@ -74,9 +74,9 @@ impl widget::Widget for ProcessList {
                     total_memory += sub_proc.memory();
                     total_cpu += sub_proc.cpu_usage()
                 }
-                process_data.insert("CPU %".to_string(), format!("{:.1}", (total_cpu / physical_core_count as f32)));
-                process_data.insert("Count".to_string(), count.to_string());
-                process_data.insert("Memory %".to_string(), format!("{:.1}", (total_memory as f32 * 100. / self.sysinfo.total_memory() as f32)));
+                process_data.insert(String::from("CPU %"), format!("{:.1}", (total_cpu / physical_core_count as f32)));
+                process_data.insert(String::from("Count"), format!("{}", count));
+                process_data.insert(String::from("Memory %"), format!("{:.1}", (total_memory as f32 * 100. / self.sysinfo.total_memory() as f32)));
 
                 new_process_list.push(components::listview::ListItem::new(process.name(), &process_data));
             }
