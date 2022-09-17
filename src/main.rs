@@ -187,7 +187,7 @@ async fn main() {
     }));
 
 
-    let option: Option = serde_json::from_str(&std::fs::read_to_string(format!("{}/.config/rtop/config", home::home_dir().unwrap().display())).unwrap_or_else(|_| "{}".to_string())).unwrap();
+    let option: Option = serde_json::from_str(&std::fs::read_to_string(format!("{}/.config/rtop/config.json", home::home_dir().unwrap().display())).unwrap_or_else(|_| "{}".to_string())).unwrap();
     
     let mut plugins = std::collections::HashMap::new(); // 0: name  1: dylib
     for plugin in option.plugins {
