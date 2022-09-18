@@ -12,9 +12,9 @@ type WidgetInitializerResult<'a> =
 
 fn default_pages() -> Vec<Vec<String>> {
     vec![vec![
-        "cpu_chart".to_string(),
-        "memory_chart".to_string(),
-        "process_list".to_string(),
+        String::from("cpu_chart"),
+        String::from("memory_chart"),
+        String::from("process_list"),
     ]]
 }
 #[derive(Deserialize)]
@@ -206,7 +206,7 @@ struct ScreenWidget {
 }
 struct Page {
     widgets: Vec<ScreenWidget>,
-    focusable_widgets: Vec<i32>,
+    focusable_widgets: Vec<usize>,
 }
 unsafe impl Send for Page {}
 
@@ -226,7 +226,7 @@ async fn main() {
             "{}/.config/rtop/config.json",
             home::home_dir().unwrap().display()
         ))
-        .unwrap_or_else(|_| "{}".to_string()),
+        .unwrap_or_else(|_| String::from("{}")),
     )
     .unwrap();
 
@@ -388,7 +388,7 @@ async fn main() {
         );
     }
 
-    let current_os = sysinfo.name().unwrap();
+    let current_os = sysinfo.name().unwrap_or_else(|| String::from("You"));
     attron(ncurses::A_BOLD());
     attron(COLOR_PAIR(4));
     addstr(" rtop ");
@@ -427,9 +427,9 @@ async fn main() {
                 item.set_border_color(COLOR_PAIR(2));
             }
             if current_page_focusable_widget_count > 1 {
-                let tmp = current_page.focusable_widgets[current_widget - 1];
-                widgets[(tmp as usize) - 1].set_border_color(COLOR_PAIR(4));
-                widgets[(tmp as usize) - 1].refresh();
+                let tmp = current_page.focusable_widgets[current_widget - 1] as usize;
+                widgets[(tmp) - 1].set_border_color(COLOR_PAIR(4));
+                widgets[(tmp) - 1].refresh();
             }
             for widget in widgets.iter().take(current_page_widget_count) {
                 widget.refresh();
@@ -531,7 +531,7 @@ async fn main() {
                     current_page.widgets
                         [(current_page.focusable_widgets[current_widget - 1] as usize) - 1]
                         .plugin
-                        .on_input(ncurses::keyname(key).unwrap());
+                        .on_input(ncurses::keyname(key).unwrap_or_default());
                 }
             }
         }
@@ -633,7 +633,7 @@ fn create_widget_window(height: i32, width: i32, widget_count: i32) -> Vec<windo
         window::Window::new(
             height - win_height,
             width - (width as f32 / 2.).ceil() as i32,
-            width - ((width / 2) as i32),
+            width - (width / 2),
             1 + win_height,
             COLOR_PAIR(2),
             COLOR_PAIR(4),
@@ -685,9 +685,9 @@ fn init_process_plugin() -> (Box<dyn widget::Widget>, bool) {
                 &Vec::new(),
                 String::from("Name"),
                 vec![
-                    "CPU %".to_string(),
-                    "Count".to_string(),
-                    "Memory %".to_string(),
+                    String::from("CPU %"),
+                    String::from("Count"),
+                    String::from("Memory %"),
                 ],
                 std::option::Option::from(String::from("Name")),
                 std::option::Option::from(Ordering::Inversed),
