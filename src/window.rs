@@ -11,14 +11,32 @@ pub struct Window {
     inner_window: ncurses::WINDOW,
     text_color: attr_t,
     border_color: attr_t,
-    title: String
+    title: String,
 }
 
 impl Window {
-    pub fn new(height: i32, width: i32, x: i32, y: i32, border_color: attr_t, text_color: attr_t, title: String) -> Window {
+    pub fn new(
+        height: i32,
+        width: i32,
+        x: i32,
+        y: i32,
+        border_color: attr_t,
+        text_color: attr_t,
+        title: String,
+    ) -> Window {
         let win_box = newwin(height, width, y, x);
         let win_inner = derwin(win_box, height - 2, width - 4, 1, 2);
-        let new_win = Window{height, width, x, y, curse_window: win_box, inner_window: win_inner, text_color, border_color, title};
+        let new_win = Window {
+            height,
+            width,
+            x,
+            y,
+            curse_window: win_box,
+            inner_window: win_inner,
+            text_color,
+            border_color,
+            title,
+        };
         wattrset(new_win.inner_window, text_color);
         new_win.draw_border();
         new_win
@@ -32,8 +50,8 @@ impl Window {
     pub fn write(&self, content: &str) {
         werase(self.inner_window);
 
-        let mut color_applied = vec!();
-        let mut effect_applied = vec!();
+        let mut color_applied = vec![];
+        let mut effect_applied = vec![];
 
         let mut trimmed_text = String::new();
         let mut formated_string = String::new();
@@ -51,18 +69,23 @@ impl Window {
 
         for (i, line) in trimmed_text.split('\n').into_iter().enumerate() {
             if line.graphemes(true).count() == self.width as usize - 4 && line.ends_with('\n') {
-
                 let tmp = content.split('\n').collect::<Vec<&str>>()[i].split("");
 
-                formated_string += &tmp.take(line.graphemes(true).count() - 1).into_iter().collect::<String>();
+                formated_string += &tmp
+                    .take(line.graphemes(true).count() - 1)
+                    .into_iter()
+                    .collect::<String>();
             } else if line.graphemes(true).count() == self.width as usize - 4 {
                 formated_string += content.split('\n').collect::<Vec<&str>>()[i];
             } else {
-                writeln!(&mut formated_string, "{}", content.split('\n').collect::<Vec<&str>>()[i]).unwrap();
+                writeln!(
+                    &mut formated_string,
+                    "{}",
+                    content.split('\n').collect::<Vec<&str>>()[i]
+                )
+                .unwrap();
             }
         }
-
-
 
         for el in formated_string.split("[[EFFECT_").collect::<Vec<&str>>() {
             if el.contains("]]") {
@@ -71,7 +94,9 @@ impl Window {
                 let attr = self.get_attr_from_string(effect[0]);
                 if let Some(attr) = attr {
                     if effect[0].starts_with("COLOR") {
-                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr {
+                        if !color_applied.is_empty()
+                            && color_applied[color_applied.len() - 1] == attr
+                        {
                             color_applied.pop();
                         } else {
                             color_applied.push(attr);
@@ -82,7 +107,6 @@ impl Window {
                         effect_applied.push(attr);
                     }
                 }
-
 
                 if effect_applied.is_empty() {
                     wattr_off(self.inner_window, A_ATTRIBUTES());
@@ -99,7 +123,6 @@ impl Window {
             } else {
                 waddstr(self.inner_window, el);
             }
-
         }
 
         wattrset(self.inner_window, self.text_color);
@@ -111,8 +134,8 @@ impl Window {
         wattroff(self.curse_window, self.border_color);
         mvwaddstr(self.curse_window, 0, 2, " ");
 
-        let mut color_applied = vec!();
-        let mut effect_applied = vec!();
+        let mut color_applied = vec![];
+        let mut effect_applied = vec![];
         for el in self.title.split("[[EFFECT_").collect::<Vec<&str>>() {
             if el.contains("]]") {
                 let effect: Vec<&str> = el.split("]]").collect();
@@ -120,7 +143,9 @@ impl Window {
                 let attr = self.get_attr_from_string(effect[0]);
                 if let Some(attr) = attr {
                     if effect[0].starts_with("COLOR") {
-                        if !color_applied.is_empty() && color_applied[color_applied.len() - 1] == attr {
+                        if !color_applied.is_empty()
+                            && color_applied[color_applied.len() - 1] == attr
+                        {
                             color_applied.pop();
                         } else {
                             color_applied.push(attr);
@@ -148,7 +173,6 @@ impl Window {
             } else {
                 waddstr(self.curse_window, el);
             }
-
         }
 
         waddstr(self.curse_window, " ");
@@ -193,7 +217,7 @@ impl Window {
                 "CYAN" => COLOR_CYAN,
                 "WHITE" => COLOR_WHITE,
                 "BLACK" => COLOR_BLACK,
-                _ => -1
+                _ => -1,
             };
             let background = match attribute.split('_').collect::<Vec<&str>>()[2] {
                 "RED" => COLOR_RED,
@@ -204,9 +228,9 @@ impl Window {
                 "CYAN" => COLOR_CYAN,
                 "WHITE" => COLOR_WHITE,
                 "BLACK" => COLOR_BLACK,
-                _ => -1
+                _ => -1,
             };
-            
+
             init_pair(foreground * 10 + background, foreground, background);
             std::option::Option::from(COLOR_PAIR(foreground * 10 + background))
         } else {
@@ -224,7 +248,7 @@ impl Window {
                 "COLOR_CYAN" => std::option::Option::from(COLOR_PAIR(6)),
                 "COLOR_WHITE" => std::option::Option::from(COLOR_PAIR(7)),
                 "COLOR_BLACK" => std::option::Option::from(COLOR_PAIR(8)),
-                _ => std::option::Option::None 
+                _ => std::option::Option::None,
             }
         }
     }
