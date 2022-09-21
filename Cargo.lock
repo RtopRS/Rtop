@@ -208,9 +208,9 @@ dependencies = [
 
 [[package]]
 name = "rtop_dev"
-version = "1.0.0-beta.2"
+version = "1.0.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd2b6b4f279cf22c4f726b3825ed8ad363d3abed2d4f2e70e0b6de6bc748d458"
+checksum = "d436783bf08868e60aac3677f52181335f35142f017a360718d925a81bcd0146"
 dependencies = [
  "human-sort",
 ]

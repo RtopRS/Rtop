@@ -23,10 +23,10 @@ impl Window {
         border_color: attr_t,
         text_color: attr_t,
         title: String,
-    ) -> Window {
+    ) -> Self {
         let win_box = newwin(height, width, y, x);
         let win_inner = derwin(win_box, height - 2, width - 4, 1, 2);
-        let new_win = Window {
+        let new_win = Self {
             height,
             width,
             x,
@@ -91,7 +91,7 @@ impl Window {
             if el.contains("]]") {
                 let effect: Vec<&str> = el.split("]]").collect();
 
-                let attr = self.get_attr_from_string(effect[0]);
+                let attr = get_attr_from_string(effect[0]);
                 if let Some(attr) = attr {
                     if effect[0].starts_with("COLOR") {
                         if !color_applied.is_empty()
@@ -140,7 +140,7 @@ impl Window {
             if el.contains("]]") {
                 let effect: Vec<&str> = el.split("]]").collect();
 
-                let attr = self.get_attr_from_string(effect[0]);
+                let attr = get_attr_from_string(effect[0]);
                 if let Some(attr) = attr {
                     if effect[0].starts_with("COLOR") {
                         if !color_applied.is_empty()
@@ -202,54 +202,54 @@ impl Window {
         self.border_color = border_color;
         self.draw_border();
     }
+}
 
-    fn get_attr_from_string(&self, attribute: &str) -> std::option::Option<attr_t> {
-        let mut tmp = attribute.chars().collect::<Vec<char>>();
-        tmp.retain(|&c| c == '_');
+fn get_attr_from_string(attribute: &str) -> std::option::Option<attr_t> {
+    let mut tmp = attribute.chars().collect::<Vec<char>>();
+    tmp.retain(|&c| c == '_');
 
-        if attribute.starts_with("COLOR_") && tmp.len() == 2 {
-            let foreground = match attribute.split('_').collect::<Vec<&str>>()[1] {
-                "RED" => COLOR_RED,
-                "GREEN" => COLOR_GREEN,
-                "YELLOW" => COLOR_YELLOW,
-                "BLUE" => COLOR_BLUE,
-                "MAGENTA" => COLOR_MAGENTA,
-                "CYAN" => COLOR_CYAN,
-                "WHITE" => COLOR_WHITE,
-                "BLACK" => COLOR_BLACK,
-                _ => -1,
-            };
-            let background = match attribute.split('_').collect::<Vec<&str>>()[2] {
-                "RED" => COLOR_RED,
-                "GREEN" => COLOR_GREEN,
-                "YELLOW" => COLOR_YELLOW,
-                "BLUE" => COLOR_BLUE,
-                "MAGENTA" => COLOR_MAGENTA,
-                "CYAN" => COLOR_CYAN,
-                "WHITE" => COLOR_WHITE,
-                "BLACK" => COLOR_BLACK,
-                _ => -1,
-            };
+    if attribute.starts_with("COLOR_") && tmp.len() == 2 {
+        let foreground = match attribute.split('_').collect::<Vec<&str>>()[1] {
+            "RED" => COLOR_RED,
+            "GREEN" => COLOR_GREEN,
+            "YELLOW" => COLOR_YELLOW,
+            "BLUE" => COLOR_BLUE,
+            "MAGENTA" => COLOR_MAGENTA,
+            "CYAN" => COLOR_CYAN,
+            "WHITE" => COLOR_WHITE,
+            "BLACK" => COLOR_BLACK,
+            _ => -1,
+        };
+        let background = match attribute.split('_').collect::<Vec<&str>>()[2] {
+            "RED" => COLOR_RED,
+            "GREEN" => COLOR_GREEN,
+            "YELLOW" => COLOR_YELLOW,
+            "BLUE" => COLOR_BLUE,
+            "MAGENTA" => COLOR_MAGENTA,
+            "CYAN" => COLOR_CYAN,
+            "WHITE" => COLOR_WHITE,
+            "BLACK" => COLOR_BLACK,
+            _ => -1,
+        };
 
-            init_pair(foreground * 10 + background, foreground, background);
-            std::option::Option::from(COLOR_PAIR(foreground * 10 + background))
-        } else {
-            match attribute {
-                "REVERSE" => std::option::Option::from(ncurses::A_REVERSE()),
-                "BOLD" => std::option::Option::from(ncurses::A_BOLD()),
-                "ITALIC" => std::option::Option::from(ncurses::A_ITALIC()),
-                "DIMMED" => std::option::Option::from(ncurses::A_DIM()),
-                "UNDERLINE" => std::option::Option::from(ncurses::A_UNDERLINE()),
-                "COLOR_RED" => std::option::Option::from(COLOR_PAIR(1)),
-                "COLOR_GREEN" => std::option::Option::from(COLOR_PAIR(2)),
-                "COLOR_YELLOW" => std::option::Option::from(COLOR_PAIR(3)),
-                "COLOR_BLUE" => std::option::Option::from(COLOR_PAIR(4)),
-                "COLOR_MAGENTA" => std::option::Option::from(COLOR_PAIR(5)),
-                "COLOR_CYAN" => std::option::Option::from(COLOR_PAIR(6)),
-                "COLOR_WHITE" => std::option::Option::from(COLOR_PAIR(7)),
-                "COLOR_BLACK" => std::option::Option::from(COLOR_PAIR(8)),
-                _ => std::option::Option::None,
-            }
+        init_pair(foreground * 10 + background, foreground, background);
+        std::option::Option::from(COLOR_PAIR(foreground * 10 + background))
+    } else {
+        match attribute {
+            "REVERSE" => std::option::Option::from(ncurses::A_REVERSE()),
+            "BOLD" => std::option::Option::from(ncurses::A_BOLD()),
+            "ITALIC" => std::option::Option::from(ncurses::A_ITALIC()),
+            "DIMMED" => std::option::Option::from(ncurses::A_DIM()),
+            "UNDERLINE" => std::option::Option::from(ncurses::A_UNDERLINE()),
+            "COLOR_RED" => std::option::Option::from(COLOR_PAIR(1)),
+            "COLOR_GREEN" => std::option::Option::from(COLOR_PAIR(2)),
+            "COLOR_YELLOW" => std::option::Option::from(COLOR_PAIR(3)),
+            "COLOR_BLUE" => std::option::Option::from(COLOR_PAIR(4)),
+            "COLOR_MAGENTA" => std::option::Option::from(COLOR_PAIR(5)),
+            "COLOR_CYAN" => std::option::Option::from(COLOR_PAIR(6)),
+            "COLOR_WHITE" => std::option::Option::from(COLOR_PAIR(7)),
+            "COLOR_BLACK" => std::option::Option::from(COLOR_PAIR(8)),
+            _ => std::option::Option::None,
         }
     }
 }

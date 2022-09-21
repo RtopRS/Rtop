@@ -1,7 +1,7 @@
 use chrono::Timelike;
 use ncurses::*;
-use rtop_dev::components::listview::*;
-use rtop_dev::*;
+use rtop_dev::components::listview::Ordering;
+use rtop_dev::{components, widget};
 use rtop_rs::window;
 use serde::Deserialize;
 use sysinfo::{ProcessExt, ProcessorExt, SystemExt};
@@ -75,7 +75,7 @@ impl widget::Widget for ProcessList {
                 for sub_proc in self.sysinfo.processes_by_exact_name(process.name()) {
                     count += 1;
                     total_memory += sub_proc.memory();
-                    total_cpu += sub_proc.cpu_usage()
+                    total_cpu += sub_proc.cpu_usage();
                 }
                 process_data.insert(
                     String::from("CPU %"),
@@ -160,7 +160,7 @@ impl widget::Widget for CpuUsage {
         self.sysinfo.refresh_cpu();
         self.data.push(
             ((self.sysinfo.global_processor_info().cpu_usage() + self.last_cpu_usage) / 2.) as i32,
-        )
+        );
     }
 
     fn display(&mut self, h: i32, w: i32) -> String {
@@ -294,7 +294,7 @@ async fn main() {
                     }),
                 }],
                 focusable_widgets: vec![],
-            })
+            });
         } else if page.is_empty() {
             pages.lock().await.push(Page {
                 widgets: vec![ScreenWidget {
@@ -304,7 +304,7 @@ async fn main() {
                     }),
                 }],
                 focusable_widgets: vec![],
-            })
+            });
         } else {
             let mut i = 0;
             let mut pages_widgets = vec![];
@@ -313,10 +313,11 @@ async fn main() {
             for widget in page {
                 i += 1;
                 if builtin_addon.contains_key(&widget) {
-                    let tmp = builtin_addon[&widget]();
+                    let mut tmp = builtin_addon[&widget]();
                     if tmp.1 {
                         focusable_widgets.push(i);
                     }
+                    tmp.0.init();
                     pages_widgets.push(ScreenWidget {
                         name: String::from(&widget),
                         plugin: tmp.0,
@@ -330,14 +331,15 @@ async fn main() {
                             unsafe { plugin.get(format!("init_{}", tmp[1]).as_bytes()) };
 
                         if let Ok(initializer) = initializer {
-                            let created_widget = initializer();
+                            let mut created_widget = initializer();
                             if created_widget.1 {
                                 focusable_widgets.push(i);
                             }
+                            created_widget.0.init();
                             pages_widgets.push(ScreenWidget {
                                 name: widget,
                                 plugin: created_widget.0,
-                            })
+                            });
                         } else {
                             pages_widgets.push(ScreenWidget {
                                 name: String::from("Error"),
@@ -363,7 +365,7 @@ async fn main() {
             pages.lock().await.push(Page {
                 widgets: pages_widgets,
                 focusable_widgets,
-            })
+            });
         }
     }
 
@@ -371,7 +373,7 @@ async fn main() {
         loop {
             for page in &mut *pages_mutex.lock().await {
                 for el in &mut page.widgets {
-                    el.plugin.on_update()
+                    el.plugin.on_update();
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(333));
