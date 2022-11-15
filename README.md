@@ -71,18 +71,15 @@ Then, paste it this config template:
 If you want to add a plugin, simply add this entry in the `plugins` key
 ```json
 {
-    "path": "/path/to/the/lib.so",
-    "provided_widgets": [
-        "foo",
-        "bar"
-    ]
+    "name": "foo",
+    "path": "/path/to/the/lib.so"
 }
 ```
-Then, simply add some plugin's widget to one page like this
+Then, simply add some plugin's widgets. For example, here we add the widget `foo` and the widget `bar` on the same page.
 ```json
 [
-    "foo",
-    "bar"
+    "foo.foo",
+    "foo.bar"
 ]
 ```
 
@@ -96,17 +93,14 @@ The final result should look like this
             "process_list"
         ],
         [
-            "foo",
-            "bar"
+            "foo.foo",
+            "foo.bar"
         ]
     ],
     "plugins": [
         {
-            "path": "/path/to/the/lib.so",
-            "provided_widgets": [
-                "foo",
-                "bar"
-            ]
+            "name": "foo",
+            "path": "/path/to/the/lib.so"
         }
     ]
 }

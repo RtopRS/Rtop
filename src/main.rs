@@ -4,7 +4,7 @@ use rtop_dev::components::listview::Ordering;
 use rtop_dev::{components, widget};
 use rtop_rs::window;
 use serde::Deserialize;
-use sysinfo::{ProcessExt, ProcessorExt, SystemExt};
+use sysinfo::{ProcessExt, CpuExt, SystemExt};
 
 type WidgetInitializer = fn() -> (Box<dyn widget::Widget>, bool);
 type WidgetInitializerResult<'a> =
@@ -159,7 +159,7 @@ impl widget::Widget for CpuUsage {
     fn on_update(&mut self) {
         self.sysinfo.refresh_cpu();
         self.data.push(
-            ((self.sysinfo.global_processor_info().cpu_usage() + self.last_cpu_usage) / 2.) as i32,
+            ((self.sysinfo.global_cpu_info().cpu_usage() + self.last_cpu_usage) / 2.) as i32,
         );
     }
 
