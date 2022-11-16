@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "rtop-rs"
-version = "1.1.0-beta.6"
+version = "1.1.0-beta.7"
 dependencies = [
  "chrono",
  "home",
@@ -319,9 +319,9 @@ dependencies = [
 
 [[package]]
 name = "rtop_dev"
-version = "1.0.0-beta.3"
+version = "1.1.0-beta.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d436783bf08868e60aac3677f52181335f35142f017a360718d925a81bcd0146"
+checksum = "6ba083d9b8b2d3601f3d8acb895f18045cc05bd21b8202b102f1ef8c22075891"
 dependencies = [
  "human-sort",
 ]
