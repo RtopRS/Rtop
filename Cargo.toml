@@ -1,6 +1,6 @@
 [package]
 name = "rtop-rs"
-version = "1.0.4"
+version = "1.1.0-beta.7"
 authors = ["SquitchYT<contact@squitch.fr>"]
 edition = "2021"
 description = "Faster and better alternative to Vtop written in Rust."
@@ -18,9 +18,14 @@ lto = true
 tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros", "signal"] }
 chrono = { version = "0.4.19", features = ["clock"], default-features = false }
 ncurses = { version = "5.101.0", features = ["wide"] }
-sysinfo = { version = "0.23.5", default-features = false }
+sysinfo = { version = "0.26.7", default-features = false }
 libloading = "0.7"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"]}
 home = "0.5.3"
-rtop_dev = "0.2.0"
+rtop_dev = "1.1.0-beta.1"
+unicode-segmentation = "1.9.0"
+
+[[bin]]
+name = "rtop"
+path = "src/main.rs"
